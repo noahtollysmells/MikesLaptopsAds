@@ -72,17 +72,17 @@
       syncStatus.className = "warn";
 
       try {
-        const response = await fetch("https://worldtimeapi.org/api/timezone/Europe/London", { cache: "no-store" });
-        const data = await response.json();
+        const response = await fetch(window.location.href, { method: "HEAD", cache: "no-store" });
+        const serverDate = response.headers.get("Date");
 
-        const serverTime = new Date(data.datetime).getTime();
+        const serverTime = new Date(serverDate).getTime();
         const localTime = Date.now();
 
         timeOffset = serverTime - localTime;
 
-        syncStatus.textContent = "Time synced";
+        syncStatus.textContent = "Synced with GitHub";
         syncStatus.className = "ok";
-      } catch (err) {
+      } catch (error) {
         syncStatus.textContent = "Offline using local time";
         syncStatus.className = "error";
       }
