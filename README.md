@@ -180,14 +180,6 @@ Add Video Support
 
 Also possible; just ask.
 
-# 🛡️ Why This Works Better Than USB Slideshows
-Feature	USB Slideshow	MikesLaptopsAds
-Perfect sync	No	Yes
-Easy updates	No	Yes
-Runs everywhere	No	Yes
-Requires software	Yes	No
-Cloud hosted	No	Yes
-Reliable	Medium	Very high
 # ❤️ Credits
 
 Built specifically for the Mike's Laptops showroom system to simplify advertising across multiple demo laptops.
