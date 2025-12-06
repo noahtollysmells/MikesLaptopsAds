@@ -79,6 +79,94 @@
       color: #888;
       margin-top: 40px;
     }
+    #adminContent {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1200px;
+    }
+    .adminSection {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border: 1px solid #00ff99;
+    }
+    .adminSection h2 {
+      color: #00ff99;
+      font-size: 18px;
+      margin: 0 0 10px 0;
+      border-bottom: 2px solid #00ff99;
+      padding-bottom: 10px;
+    }
+    .adminRow {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .adminRow label {
+      min-width: 100px;
+      color: #aaa;
+      font-size: 14px;
+    }
+    .adminRow span {
+      color: #00ff99;
+      font-weight: bold;
+    }
+    button {
+      padding: 8px 12px;
+      background: #00ff99;
+      color: black;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    button:hover {
+      background: #00dd77;
+    }
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    input[type="range"] {
+      width: 120px;
+      cursor: pointer;
+    }
+    input[type="number"] {
+      width: 60px;
+      padding: 4px;
+      background: rgba(0, 255, 153, 0.1);
+      border: 1px solid #00ff99;
+      color: #00ff99;
+      border-radius: 4px;
+    }
+    #adsList {
+      max-height: 150px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .adItem {
+      padding: 5px;
+      margin: 3px 0;
+      background: rgba(0, 255, 153, 0.1);
+      border-left: 3px solid #00ff99;
+      cursor: pointer;
+    }
+    .adItem:hover {
+      background: rgba(0, 255, 153, 0.2);
+    }
+    .adItem.current {
+      background: rgba(0, 255, 153, 0.3);
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -91,7 +179,67 @@
 
   <div id="adminPanel">
     <h1>SUPREME COMMANDER PANEL</h1>
-    <div id="adminTime"></div>
+    <div id="adminContent">
+      <div class="adminSection">
+        <h2>Time & Sync</h2>
+        <div class="adminRow">
+          <label>Current Time:</label>
+          <span id="adminTime"></span>
+        </div>
+        <div class="adminRow">
+          <label>Sync Status:</label>
+          <span id="syncStatusPanel"></span>
+        </div>
+      </div>
+      <div class="adminSection">
+        <h2>Slideshow Controls</h2>
+        <div class="adminRow">
+          <button id="playPauseBtn">Play/Pause</button>
+          <button id="prevBtn">← Prev</button>
+          <button id="nextBtn">Next →</button>
+        </div>
+        <div class="adminRow">
+          <label>Slide:</label>
+          <span id="slideCounter"></span>
+        </div>
+        <div class="adminRow">
+          <label>Duration (s):</label>
+          <input type="number" id="durationInput" min="1" max="60" value="10">
+          <button id="applyDurationBtn">Apply</button>
+        </div>
+      </div>
+      <div class="adminSection">
+        <h2>System Info</h2>
+        <div class="adminRow">
+          <label>Uptime:</label>
+          <span id="uptimeInfo"></span>
+        </div>
+        <div class="adminRow">
+          <label>Browser:</label>
+          <span id="browserInfo"></span>
+        </div>
+      </div>
+      <div class="adminSection">
+        <h2>Ad Management</h2>
+        <div id="adsList"></div>
+        <button id="refreshAdsBtn">Refresh Ad List</button>
+      </div>
+      <div class="adminSection">
+        <h2>Display Controls</h2>
+        <div class="adminRow">
+          <label>Brightness:</label>
+          <input type="range" id="brightnessSlider" min="0" max="200" value="100">
+        </div>
+        <div class="adminRow">
+          <label>Contrast:</label>
+          <input type="range" id="contrastSlider" min="0" max="200" value="100">
+        </div>
+        <div class="adminRow">
+          <button id="screenshotBtn">Screenshot</button>
+          <button id="toggleFullscreenBtn">Fullscreen</button>
+        </div>
+      </div>
+    </div>
     <div id="adminClose">Press ESC to close</div>
   </div>
 
@@ -105,18 +253,32 @@
     ];
 
     let timeOffset = 0;
+    let slideshowPaused = false;
+    let startTime = Date.now();
 
     const syncStatus = document.getElementById("syncStatus");
     const adminPanel = document.getElementById("adminPanel");
     const adminTime = document.getElementById("adminTime");
+    const syncStatusPanel = document.getElementById("syncStatusPanel");
+    const slideCounter = document.getElementById("slideCounter");
+    const uptimeInfo = document.getElementById("uptimeInfo");
+    const browserInfo = document.getElementById("browserInfo");
+    const adsList = document.getElementById("adsList");
+    const brightnessSlider = document.getElementById("brightnessSlider");
+    const contrastSlider = document.getElementById("contrastSlider");
+    const durationInput = document.getElementById("durationInput");
+    const slideshow = document.getElementById("slideshow");
+    const slide = document.getElementById("slide");
     
     let keySequence = "";
+    let currentSlideIndex = 0;
 
     document.addEventListener("keydown", (e) => {
       keySequence += e.key;
 
       if (keySequence.includes("123")) {
         adminPanel.classList.add("open");
+        updateAdminPanel();
         keySequence = "";
       }
 
@@ -129,6 +291,71 @@
         keySequence = keySequence.slice(-10);
       }
     });
+
+    document.getElementById("playPauseBtn").addEventListener("click", () => {
+      slideshowPaused = !slideshowPaused;
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      currentSlideIndex = (currentSlideIndex + 1) % images.length;
+      updateSlide();
+    });
+
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      currentSlideIndex = (currentSlideIndex - 1 + images.length) % images.length;
+      updateSlide();
+    });
+
+    document.getElementById("applyDurationBtn").addEventListener("click", () => {
+      slideDurationMs = parseInt(durationInput.value) * 1000;
+    });
+
+    document.getElementById("brightnessSlider").addEventListener("input", (e) => {
+      slide.style.filter = `brightness(${e.target.value}%) contrast(${contrastSlider.value}%)`;
+    });
+
+    document.getElementById("contrastSlider").addEventListener("input", (e) => {
+      slide.style.filter = `brightness(${brightnessSlider.value}%) contrast(${e.target.value}%)`;
+    });
+
+    document.getElementById("refreshAdsBtn").addEventListener("click", updateAdsList);
+
+    document.getElementById("screenshotBtn").addEventListener("click", async () => {
+      const canvas = await html2canvas(slideshow);
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL();
+      link.download = "screenshot.png";
+      link.click();
+    });
+
+    document.getElementById("toggleFullscreenBtn").addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+    function updateAdsList() {
+      adsList.innerHTML = "";
+      images.forEach((img, index) => {
+        const div = document.createElement("div");
+        div.className = "adItem" + (index === currentSlideIndex ? " current" : "");
+        div.textContent = `${index + 1}. ${img}`;
+        div.addEventListener("click", () => {
+          currentSlideIndex = index;
+          updateSlide();
+        });
+        adsList.appendChild(div);
+      });
+    }
+
+    function updateAdminPanel() {
+      syncStatusPanel.textContent = syncStatus.textContent;
+      syncStatusPanel.className = syncStatus.className;
+      browserInfo.textContent = navigator.userAgent.split("/").pop().split(" ")[0];
+      updateAdsList();
+    }
 
     async function syncTime() {
       syncStatus.textContent = "Syncing time";
@@ -156,15 +383,15 @@
     }
 
     function updateSlide() {
-      const now = getAccurateTime();
+      if (!slideshowPaused) {
+        const now = getAccurateTime();
+        const totalCycleMs = slideDurationMs * images.length;
+        const position = now % totalCycleMs;
+        currentSlideIndex = Math.floor(position / slideDurationMs);
+      }
 
-      const totalCycleMs = slideDurationMs * images.length;
-
-      const position = now % totalCycleMs;
-
-      const index = Math.floor(position / slideDurationMs);
-
-      document.getElementById("slide").src = images[index];
+      slide.src = images[currentSlideIndex];
+      slideCounter.textContent = `${currentSlideIndex + 1}/${images.length}`;
     }
 
     async function startSlideshow() {
@@ -181,6 +408,14 @@
           const now = getAccurateTime();
           const time = new Date(now);
           adminTime.textContent = time.toLocaleTimeString();
+          
+          const uptime = Math.floor((Date.now() - startTime) / 1000);
+          const hours = Math.floor(uptime / 3600);
+          const mins = Math.floor((uptime % 3600) / 60);
+          const secs = uptime % 60;
+          uptimeInfo.textContent = `${hours}h ${mins}m ${secs}s`;
+          
+          slideCounter.textContent = `${currentSlideIndex + 1}/${images.length}`;
         }
       }, 100);
     }
