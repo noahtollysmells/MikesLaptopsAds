@@ -45,6 +45,40 @@
     .ok { color: #00ff99; }
     .warn { color: #ffdd33; }
     .error { color: #ff4444; }
+    #adminPanel {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 1000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+    #adminPanel.open {
+      display: flex;
+    }
+    #adminPanel h1 {
+      font-size: 36px;
+      margin-bottom: 30px;
+      color: #00ff99;
+    }
+    #adminTime {
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 40px;
+      font-family: monospace;
+    }
+    #adminClose {
+      font-size: 14px;
+      color: #888;
+      margin-top: 40px;
+    }
   </style>
 </head>
 <body>
@@ -54,6 +88,12 @@
   </div>
 
   <div id="syncStatus" class="warn">Syncing time</div>
+
+  <div id="adminPanel">
+    <h1>ADMIN PANEL</h1>
+    <div id="adminTime"></div>
+    <div id="adminClose">Press ESC to close</div>
+  </div>
 
   <script>
     const slideDurationMs = 10000;
@@ -67,6 +107,28 @@
     let timeOffset = 0;
 
     const syncStatus = document.getElementById("syncStatus");
+    const adminPanel = document.getElementById("adminPanel");
+    const adminTime = document.getElementById("adminTime");
+    
+    let keySequence = "";
+
+    document.addEventListener("keydown", (e) => {
+      keySequence += e.key;
+
+      if (keySequence.includes("123")) {
+        adminPanel.classList.add("open");
+        keySequence = "";
+      }
+
+      if (e.key === "Escape") {
+        adminPanel.classList.remove("open");
+        keySequence = "";
+      }
+
+      if (keySequence.length > 10) {
+        keySequence = keySequence.slice(-10);
+      }
+    });
 
     async function syncTime() {
       syncStatus.textContent = "Syncing time";
@@ -113,6 +175,14 @@
       setInterval(updateSlide, 1000);
 
       setInterval(syncTime, 60000);
+
+      setInterval(() => {
+        if (adminPanel.classList.contains("open")) {
+          const now = getAccurateTime();
+          const time = new Date(now);
+          adminTime.textContent = time.toLocaleTimeString();
+        }
+      }, 100);
     }
 
     startSlideshow();
