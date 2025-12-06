@@ -42,6 +42,18 @@
       color: white;
       z-index: 10;
     }
+    #syncIndicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+      vertical-align: middle;
+      box-shadow: 0 0 6px rgba(0,0,0,0.6);
+    }
+    .sync-light.ok { background: #00ff66; box-shadow: 0 0 8px #0f0; }
+    .sync-light.warn { background: #ffdd33; box-shadow: 0 0 6px #ffdd33; }
+    .sync-light.error { background: #ff4444; box-shadow: 0 0 6px #ff4444; }
     .ok { color: #00ff99; }
     .warn { color: #ffdd33; }
     .error { color: #ff4444; }
@@ -407,7 +419,7 @@
     <img id="slide" src="" alt="Ad" />
   </div>
 
-  <div id="syncStatus" class="warn">Syncing time</div>
+  <div id="syncStatus" class="warn"><span id="syncIndicator" class="sync-light warn"></span><span id="syncStatusText">Syncing time</span></div>
 
   <div id="adminPanel">
     <h1>SUPREME COMMANDER PANEL v4.0.0</h1>
@@ -745,6 +757,8 @@
     let networkConnected = true;
 
     const syncStatus = document.getElementById("syncStatus");
+    const syncIndicator = document.getElementById("syncIndicator");
+    const syncStatusText = document.getElementById("syncStatusText");
     const adminPanel = document.getElementById("adminPanel");
     const adminTime = document.getElementById("adminTime");
     const syncStatusPanel = document.getElementById("syncStatusPanel");
@@ -788,6 +802,8 @@
     let currentSlideIndex = 0;
     let frameCount = 0;
     let lastFrameTime = Date.now();
+    let touchTaps = [];
+    const TRIPLE_TAP_WINDOW = 700; // ms within which three taps count
 
     document.addEventListener("keydown", (e) => {
       keySequence += e.key;
@@ -806,6 +822,24 @@
 
       if (keySequence.length > 10) {
         keySequence = keySequence.slice(-10);
+      }
+    });
+
+    // Triple-tap detection for touch devices to open admin panel
+    document.addEventListener('touchend', (e) => {
+      try {
+        const now = performance.now();
+        touchTaps.push(now);
+        // keep only recent taps
+        touchTaps = touchTaps.filter(t => now - t <= TRIPLE_TAP_WINDOW);
+        if (touchTaps.length >= 3) {
+          adminPanel.classList.add('open');
+          addLog('Admin panel opened (triple-tap)', 'access');
+          updateAdminPanel();
+          touchTaps = [];
+        }
+      } catch (err) {
+        // silent
       }
     });
 
@@ -1220,7 +1254,7 @@
     }
 
     function updateAdminPanel() {
-      syncStatusPanel.textContent = syncStatus.textContent;
+      syncStatusPanel.textContent = syncStatusText ? syncStatusText.textContent : syncStatus.textContent;
       syncStatusPanel.className = syncStatus.className;
       latencyInfo.textContent = latency + "ms";
       browserInfo.textContent = navigator.userAgent.split("/").pop().split(" ")[0];
@@ -1244,59 +1278,140 @@
       updateAdsList();
     }
 
+    // high-resolution time sync using worldtimeapi + performance.now
+    let perfNowAtSync = performance.now();
+    let serverTimeAtPerfNow = Date.now();
+    let slideTimer = null;
+    const preloadImgs = [];
+
+    // multi-probe sync: take multiple samples, use best half, compute median offset
+    async function probeOnce() {
+      // Try worldtime first
+      try {
+        const t0 = performance.now();
+        const res = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
+        const t1 = performance.now();
+        const data = await res.json();
+        const serverMs = new Date(data.datetime).getTime();
+        const rtt = Math.max(0, t1 - t0);
+        const perfMid = (t0 + t1) / 2;
+        const serverAtPerfMid = serverMs + rtt / 2;
+        return { offset: serverAtPerfMid - perfMid, rtt };
+      } catch (e) {
+        // fallback to HEAD Date
+        try {
+          const t0 = performance.now();
+          const head = await fetch(window.location.href, { method: "HEAD", cache: "no-store" });
+          const t1 = performance.now();
+          const serverDate = head.headers.get("Date");
+          const serverMs = new Date(serverDate).getTime();
+          const rtt = Math.max(0, t1 - t0);
+          const perfMid = (t0 + t1) / 2;
+          const serverAtPerfMid = serverMs + rtt / 2;
+          return { offset: serverAtPerfMid - perfMid, rtt };
+        } catch (e2) {
+          return null;
+        }
+      }
+    }
+
     async function syncTime() {
-      syncStatus.textContent = "Syncing time";
-      syncStatus.className = "warn";
+      if (syncIndicator) syncIndicator.className = 'sync-light warn';
+      syncStatus.className = 'warn';
+      if (syncStatusText) syncStatusText.textContent = 'Syncing time';
 
       try {
-        const syncStart = Date.now();
-        const response = await fetch(window.location.href, { method: "HEAD", cache: "no-store" });
-        latency = Date.now() - syncStart;
+        const samples = [];
+        const probes = 6;
+        for (let i = 0; i < probes; i++) {
+          const r = await probeOnce();
+          if (r) samples.push(r);
+          // small pause to decorrelate network
+          await new Promise(rp => setTimeout(rp, 80));
+        }
+
+        if (!samples.length) throw new Error('No time samples');
+
+        // sort by RTT and take best half
+        samples.sort((a, b) => a.rtt - b.rtt);
+        const best = samples.slice(0, Math.max(1, Math.floor(samples.length / 2)));
+        const offsets = best.map(s => s.offset).sort((a, b) => a - b);
+        const median = offsets[Math.floor(offsets.length / 2)];
+
+        // anchor to current perf.now
+        perfNowAtSync = performance.now();
+        serverTimeAtPerfNow = median + perfNowAtSync;
+        latency = Math.round(best.reduce((s, p) => s + p.rtt, 0) / best.length);
         lastSyncTime = Date.now();
-        
-        const serverDate = response.headers.get("Date");
 
-        const serverTime = new Date(serverDate).getTime();
-        const localTime = Date.now();
-
-        timeOffset = serverTime - localTime;
-
-        syncStatus.textContent = "Synced with GitHub";
-        syncStatus.className = "ok";
-        addLog("Time synced (latency: " + latency + "ms)", "sync");
-      } catch (error) {
-        syncStatus.textContent = "Offline using local time";
-        syncStatus.className = "error";
-        addLog("Sync failed: " + error.message, "error");
+        if (syncIndicator) syncIndicator.className = 'sync-light ok';
+        syncStatus.className = 'ok';
+        if (syncStatusText) syncStatusText.textContent = 'Synced';
+        addLog('Time synced (median latency: ' + latency + 'ms)', 'sync');
+      } catch (err) {
+        if (syncIndicator) syncIndicator.className = 'sync-light error';
+        syncStatus.className = 'error';
+        if (syncStatusText) syncStatusText.textContent = 'Offline using local time';
+        addLog('Sync failed: ' + (err && err.message), 'error');
       }
     }
 
     function getAccurateTime() {
-      return Date.now() + timeOffset;
+      // return serverTimeAtPerfNow + elapsed since perfNowAtSync
+      return Math.round(serverTimeAtPerfNow + (performance.now() - perfNowAtSync));
     }
 
-    function updateSlide() {
-      if (!slideshowPaused) {
+    function preloadImages() {
+      images.forEach((src, i) => {
+        const img = new Image();
+        img.src = src;
+        preloadImgs[i] = img;
+      });
+    }
+
+    function showSlide(index) {
+      if (!images[index]) return;
+      // update DOM only if changed
+      if (slide.src !== images[index]) slide.src = images[index];
+      slideCounter.textContent = `${index + 1}/${images.length}`;
+      if (!slideViews[index]) slideViews[index] = 0;
+      slideViews[index]++;
+      updateAdsList();
+    }
+
+    function scheduleNextChange() {
+      if (slideTimer) {
+        clearTimeout(slideTimer);
+        slideTimer = null;
+      }
+      if (slideshowPaused) return;
+      if (!images.length) return;
+
+      const now = getAccurateTime();
+      const totalCycleMs = slideDurationMs * images.length;
+      const position = ((now % totalCycleMs) + totalCycleMs) % totalCycleMs; // positive modulo
+      const timeToNext = slideDurationMs - (position % slideDurationMs);
+
+      // schedule slightly earlier to correct for setTimeout jitter
+      const adjust = 8; // ms
+      slideTimer = setTimeout(() => {
+        const preciseNow = getAccurateTime();
         if (shuffleMode) {
           currentSlideIndex = Math.floor(Math.random() * images.length);
         } else {
-          const now = getAccurateTime();
-          const totalCycleMs = slideDurationMs * images.length;
-          const position = now % totalCycleMs;
-          currentSlideIndex = Math.floor(position / slideDurationMs);
+          const idx = Math.floor((preciseNow % (slideDurationMs * images.length)) / slideDurationMs);
+          currentSlideIndex = idx;
         }
-      }
-
-      slide.src = images[currentSlideIndex];
-      slideCounter.textContent = `${currentSlideIndex + 1}/${images.length}`;
-      
-      // Track views
-      if (!slideViews[currentSlideIndex]) slideViews[currentSlideIndex] = 0;
-      slideViews[currentSlideIndex]++;
+        showSlide(currentSlideIndex);
+        // schedule next recursively
+        scheduleNextChange();
+      }, Math.max(0, timeToNext - adjust));
     }
 
     async function startSlideshow() {
       await syncTime();
+
+      preloadImages();
 
       // Fetch IP address
       try {
@@ -1317,13 +1432,23 @@
         scheduleAdSelect.appendChild(option);
       });
 
-      updateSlide();
+      // determine initial slide from accurate time
+      const now = getAccurateTime();
+      const idx = Math.floor((now % (slideDurationMs * images.length)) / slideDurationMs);
+      currentSlideIndex = idx;
+      showSlide(currentSlideIndex);
 
-      setInterval(updateSlide, 1000);
-      setInterval(syncTime, 60000);
+      // start scheduled changes
+      scheduleNextChange();
+
+      // periodic tasks
+      setInterval(() => {
+        // re-sync occasionally to remove drift
+        syncTime();
+      }, 60000);
       setInterval(updateMonitoring, 2000);
 
-      // Frame rate counter
+      // Frame rate counter (keeps running independently)
       setInterval(() => {
         const now = Date.now();
         const delta = now - lastFrameTime;
@@ -1360,7 +1485,7 @@
         }
       }, 60000);
 
-      addLog("Slideshow started v4.0.0", "startup");
+      addLog("Slideshow started v4.0.0 (high-precision sync)", "startup");
       backupNow();
     }
 
