@@ -183,3 +183,13 @@ Also possible; just ask.
 # ❤️ Credits
 
 Built specifically for the Mike's Laptops showroom system to simplify advertising across multiple demo laptops.
+
+## Admin Panel Usage
+
+- Open the panel: Type the admin code `123` anywhere, or triple-tap on touch.
+- Slideshow: Play/Pause, Next/Prev, Duration Apply, Speed presets.
+- Scheduling: Pick an Ad and time, click Add. Minute-based enforcement.
+- Blackout: Set start/end times to blank the screen during off hours.
+- Themes & Layout: Switch theme; set Panel Position; toggle Compact Mode.
+- Maintenance: Reset Settings, Clear Cache, Restart Slideshow, Screenshot.
+- Persistence: Settings save automatically and load on startup.

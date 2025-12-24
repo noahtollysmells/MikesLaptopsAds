@@ -6,11 +6,17 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    :root {
+      --main-bg: #000000;
+      --main-color: #ffffff;
+      --accent-color: #00ff99;
+    }
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: black;
+      background: var(--main-bg);
+      color: var(--main-color);
       overflow: hidden;
       user-select: none;
     }
@@ -23,7 +29,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: black;
+      background: var(--main-bg);
     }
     #slideshow img {
       max-width: 100%;
@@ -78,7 +84,7 @@
     #adminPanel h1 {
       font-size: 36px;
       margin-bottom: 30px;
-      color: #00ff99;
+      color: var(--accent-color);
     }
     #adminTime {
       font-size: 48px;
@@ -105,14 +111,15 @@
       padding: 20px;
       background: rgba(255, 255, 255, 0.05);
       border-radius: 8px;
-      border: 1px solid #00ff99;
+      border: 1px solid var(--accent-color);
     }
     .adminSection h2 {
-      color: #00ff99;
+      color: var(--accent-color);
       font-size: 18px;
       margin: 0 0 10px 0;
-      border-bottom: 2px solid #00ff99;
+      border-bottom: 2px solid var(--accent-color);
       padding-bottom: 10px;
+      cursor: pointer;
     }
     .adminRow {
       display: flex;
@@ -125,12 +132,12 @@
       font-size: 14px;
     }
     .adminRow span {
-      color: #00ff99;
+      color: var(--accent-color);
       font-weight: bold;
     }
     button {
       padding: 8px 12px;
-      background: #00ff99;
+      background: var(--accent-color);
       color: black;
       border: none;
       border-radius: 4px;
@@ -153,8 +160,8 @@
       width: 60px;
       padding: 4px;
       background: rgba(0, 255, 153, 0.1);
-      border: 1px solid #00ff99;
-      color: #00ff99;
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
       border-radius: 4px;
     }
     #adsList {
@@ -252,14 +259,14 @@
     }
     .logEntry {
       margin: 2px 0;
-      border-left: 2px solid #00ff99;
+      border-left: 2px solid var(--accent-color);
       padding-left: 5px;
     }
     select {
       padding: 6px;
       background: rgba(0, 255, 153, 0.1);
-      border: 1px solid #00ff99;
-      color: #00ff99;
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
       border-radius: 4px;
       font-weight: bold;
       cursor: pointer;
@@ -278,7 +285,7 @@
       padding: 8px;
       margin: 4px 0;
       background: rgba(0, 255, 153, 0.1);
-      border-left: 3px solid #00ff99;
+      border-left: 3px solid var(--accent-color);
       font-size: 12px;
       border-radius: 2px;
     }
@@ -314,14 +321,14 @@
     .statItem {
       padding: 10px;
       background: rgba(0, 255, 153, 0.05);
-      border: 1px solid #00ff99;
+      border: 1px solid var(--accent-color);
       border-radius: 4px;
       text-align: center;
     }
     .statItem .value {
       font-size: 18px;
       font-weight: bold;
-      color: #00ff99;
+      color: var(--accent-color);
     }
     .statItem .label {
       font-size: 10px;
@@ -338,7 +345,7 @@
     }
     .progressFill {
       height: 100%;
-      background: #00ff99;
+      background: var(--accent-color);
       transition: width 0.3s;
     }
     .themeOption {
@@ -356,7 +363,7 @@
       background: rgba(0, 255, 153, 0.2);
     }
     .adUploadArea {
-      border: 2px dashed #00ff99;
+      border: 2px dashed var(--accent-color);
       border-radius: 4px;
       padding: 15px;
       text-align: center;
@@ -371,7 +378,7 @@
       padding: 10px;
       margin: 5px 0;
       background: rgba(0, 255, 153, 0.08);
-      border: 1px solid #00ff99;
+      border: 1px solid var(--accent-color);
       border-radius: 4px;
       font-size: 11px;
       display: flex;
@@ -411,9 +418,26 @@
     .collapsible.collapsed .arrow {
       transform: rotate(-90deg);
     }
+    /* Admin panel positioning */
+    #adminPanel.pos-center { align-items: center; justify-content: center; }
+    #adminPanel.pos-left { align-items: flex-start; justify-content: center; }
+    #adminPanel.pos-right { align-items: flex-end; justify-content: center; }
+    #adminPanel.pos-top { align-items: center; justify-content: flex-start; }
+
+    /* Compact mode overrides */
+    #adminPanel.compact #adminContent { gap: 16px; }
+    #adminPanel.compact .adminSection { padding: 12px; gap: 10px; }
+    #adminPanel.compact .adminSection h2 { font-size: 16px; padding-bottom: 6px; }
+    #adminPanel.compact button { padding: 6px 10px; font-size: 11px; }
+    #adminPanel.compact .adminRow { gap: 6px; }
+
+    /* Simple collapsible sections */
+    .adminSection.collapsed > *:not(h2) { display: none; }
   </style>
 </head>
 <body>
+  <!-- Screenshot support library for admin panel 'Screenshot' button -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <div id="slideshow">
     <img id="slide" src="" alt="Ad" />
@@ -421,7 +445,7 @@
 
   <div id="syncStatus" class="warn"><span id="syncIndicator" class="sync-light warn"></span><span id="syncStatusText">Syncing time</span></div>
 
-  <div id="adminPanel">
+  <div id="adminPanel" class="pos-center">
     <h1>SUPREME COMMANDER PANEL v4.0.0</h1>
     <div id="adminScroll">
     <div id="adminContent">
@@ -701,6 +725,9 @@
           <button id="diagnosticsBtn">System Diagnostics</button>
           <button id="rebootBtn">Reboot System</button>
         </div>
+        <div class="adminRow">
+          <button id="resetSettingsBtn">Reset Settings</button>
+        </div>
       </div>
 
       <div class="adminSection">
@@ -721,7 +748,7 @@
   </div>
 
   <script>
-    const slideDurationMs = 10000;
+    let slideDurationMs = 10000;
 
     const images = [
       "ads/ad1.png",
@@ -797,6 +824,10 @@
     const uploadArea = document.getElementById("uploadArea");
     const fileInput = document.getElementById("fileInput");
     const versionHistory = document.getElementById("versionHistory");
+    const panelPosition = document.getElementById("panelPosition");
+    const compactModeToggle = document.getElementById("compactModeToggle");
+    const autoBackupBtn = document.getElementById("autoBackupBtn");
+    const emailNotificationsCheckbox = document.getElementById("emailNotifications");
     
     let keySequence = "";
     let currentSlideIndex = 0;
@@ -804,6 +835,9 @@
     let lastFrameTime = Date.now();
     let touchTaps = [];
     const TRIPLE_TAP_WINDOW = 700; // ms within which three taps count
+    let emailNotificationsEnabled = false;
+    let blackoutActive = false;
+    let lastScheduleMinute = null;
 
     document.addEventListener("keydown", (e) => {
       keySequence += e.key;
@@ -851,12 +885,14 @@
 
     document.getElementById("nextBtn").addEventListener("click", () => {
       currentSlideIndex = (currentSlideIndex + 1) % images.length;
-      updateSlide();
+      showSlide(currentSlideIndex);
+      scheduleNextChange();
     });
 
     document.getElementById("prevBtn").addEventListener("click", () => {
       currentSlideIndex = (currentSlideIndex - 1 + images.length) % images.length;
-      updateSlide();
+      showSlide(currentSlideIndex);
+      scheduleNextChange();
     });
 
     // Scheduling
@@ -869,6 +905,11 @@
     // Alerts
     document.getElementById("testAlertBtn").addEventListener("click", () => {
       addAlert("Test alert at " + new Date().toLocaleTimeString(), "info");
+    });
+    emailNotificationsCheckbox.addEventListener("change", (e) => {
+      emailNotificationsEnabled = e.target.checked;
+      addLog("Email notifications: " + (emailNotificationsEnabled ? "ON" : "OFF"), "settings");
+      saveSettings();
     });
 
     // API
@@ -884,9 +925,24 @@
 
     // Themes
     initializeThemes();
+    panelPosition.addEventListener("change", (e) => {
+      adminPanel.classList.remove("pos-left", "pos-right", "pos-top", "pos-center");
+      adminPanel.classList.add("pos-" + e.target.value);
+      saveSettings();
+    });
+    compactModeToggle.addEventListener("change", (e) => {
+      adminPanel.classList.toggle("compact", e.target.checked);
+      saveSettings();
+    });
 
     // Backup
     document.getElementById("backupNowBtn").addEventListener("click", backupNow);
+    autoBackupBtn.addEventListener("click", () => {
+      autoBackupEnabled = !autoBackupEnabled;
+      autoBackupBtn.textContent = autoBackupEnabled ? "Disable Auto-Backup" : "Enable Auto-Backup";
+      addLog("Auto-backup: " + (autoBackupEnabled ? "ENABLED" : "DISABLED"), "backup");
+      saveSettings();
+    });
     document.getElementById("restoreBackupBtn").addEventListener("click", () => {
       const idx = parseInt(versionHistory.value);
       if (!isNaN(idx)) restoreBackup(idx);
@@ -899,8 +955,13 @@
 
     // Keep existing event listeners
     document.getElementById("applyDurationBtn").addEventListener("click", () => {
-      slideDurationMs = parseInt(durationInput.value) * 1000;
-      addLog("Duration changed to " + durationInput.value + "s", "control");
+      const val = parseInt(durationInput.value);
+      if (!isNaN(val) && val >= 1 && val <= 60) {
+        slideDurationMs = val * 1000;
+        addLog("Duration changed to " + val + "s", "control");
+        scheduleNextChange();
+        saveSettings();
+      }
     });
 
     speedPreset.addEventListener("change", (e) => {
@@ -909,11 +970,14 @@
       slideDurationMs = durations[speedMode] * 1000;
       durationInput.value = durations[speedMode];
       addLog("Speed preset: " + speedMode, "control");
+      scheduleNextChange();
+      saveSettings();
     });
 
     shuffleToggle.addEventListener("change", (e) => {
       shuffleMode = e.target.checked;
       addLog("Shuffle mode: " + (shuffleMode ? "ON" : "OFF"), "control");
+      saveSettings();
     });
 
     document.getElementById("brightnessSlider").addEventListener("input", (e) => {
@@ -980,6 +1044,14 @@
       addLog("Logs exported", "action");
     });
 
+    document.getElementById("resetSettingsBtn").addEventListener("click", () => {
+      if (confirm("Reset all saved settings?")) {
+        localStorage.removeItem("mlads_settings");
+        addLog("Settings reset", "maintenance");
+        loadSettings(true);
+      }
+    });
+
     document.getElementById("diagnosticsBtn").addEventListener("click", () => {
       const diagnostics = {
         uptime: Math.floor((Date.now() - startTime) / 1000) + "s",
@@ -1004,6 +1076,7 @@
         adminCode = newCode;
         addLog("Admin code changed to: " + newCode, "security");
         alert("Admin code updated to: " + newCode);
+        saveSettings();
       } else {
         alert("Admin code must be at least 2 characters");
       }
@@ -1017,6 +1090,93 @@
     autoOffToggle.addEventListener("change", (e) => {
       addLog("Auto-off mode: " + (e.target.checked ? "ON" : "OFF"), "control");
     });
+
+    // Settings persistence
+    function saveSettings() {
+      try {
+        const settings = {
+          durationSeconds: Math.max(1, Math.min(60, Math.round(slideDurationMs / 1000))),
+          speedMode,
+          shuffleMode,
+          panelPosition: document.getElementById("panelPosition")?.value || "center",
+          compactMode: document.getElementById("compactModeToggle")?.checked || false,
+          blackoutStart,
+          blackoutEnd,
+          autoBackupEnabled,
+          currentTheme,
+          adminCode,
+          schedules
+        };
+        localStorage.setItem("mlads_settings", JSON.stringify(settings));
+      } catch {}
+    }
+
+    function loadSettings(resetOnly = false) {
+      try {
+        const raw = localStorage.getItem("mlads_settings");
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        if (resetOnly) {
+          // Re-apply sane defaults
+          slideDurationMs = 10000;
+          speedMode = "normal";
+          shuffleMode = false;
+          blackoutStart = null;
+          blackoutEnd = null;
+          autoBackupEnabled = false;
+          currentTheme = "dark";
+          adminCode = "123";
+        } else {
+          if (s.durationSeconds) {
+            slideDurationMs = s.durationSeconds * 1000;
+            durationInput.value = s.durationSeconds;
+          }
+          if (s.speedMode) {
+            speedMode = s.speedMode;
+            speedPreset.value = s.speedMode;
+          }
+          if (typeof s.shuffleMode === 'boolean') {
+            shuffleMode = s.shuffleMode;
+            shuffleToggle.checked = s.shuffleMode;
+          }
+          if (s.panelPosition) {
+            const pp = document.getElementById("panelPosition");
+            if (pp) {
+              pp.value = s.panelPosition;
+              adminPanel.classList.remove("pos-left", "pos-right", "pos-top", "pos-center");
+              adminPanel.classList.add("pos-" + s.panelPosition);
+            }
+          }
+          if (typeof s.compactMode === 'boolean') {
+            const cm = document.getElementById("compactModeToggle");
+            if (cm) {
+              cm.checked = s.compactMode;
+              adminPanel.classList.toggle("compact", s.compactMode);
+            }
+          }
+          if (s.blackoutStart) document.getElementById("blackoutStart").value = blackoutStart = s.blackoutStart;
+          if (s.blackoutEnd) document.getElementById("blackoutEnd").value = blackoutEnd = s.blackoutEnd;
+          if (typeof s.autoBackupEnabled === 'boolean') {
+            autoBackupEnabled = s.autoBackupEnabled;
+            const btn = document.getElementById("autoBackupBtn");
+            if (btn) btn.textContent = autoBackupEnabled ? "Disable Auto-Backup" : "Enable Auto-Backup";
+          }
+          if (s.currentTheme) {
+            currentTheme = s.currentTheme;
+            switchTheme(currentTheme);
+          }
+          if (s.adminCode) {
+            adminCode = s.adminCode;
+            adminCodeInput.value = s.adminCode;
+          }
+          if (Array.isArray(s.schedules)) {
+            schedules = s.schedules;
+            updateScheduleList();
+          }
+        }
+        scheduleNextChange();
+      } catch {}
+    }
 
     function addLog(message, type = "info") {
       const timestamp = new Date().toLocaleTimeString();
@@ -1049,6 +1209,7 @@
         schedules.push({ ad, time, date: new Date().toDateString() });
         updateScheduleList();
         addLog("Schedule added: " + ad + " at " + time, "schedule");
+        saveSettings();
       }
     }
 
@@ -1062,6 +1223,7 @@
       blackoutStart = document.getElementById("blackoutStart").value;
       blackoutEnd = document.getElementById("blackoutEnd").value;
       addLog("Blackout hours set: " + blackoutStart + " - " + blackoutEnd, "schedule");
+      saveSettings();
     }
 
     // Content Management Functions
@@ -1108,6 +1270,9 @@
       alerts.push({ message, type, time: new Date().toLocaleTimeString() });
       if (alerts.length > 20) alerts.shift();
       updateAlertsList();
+      if (emailNotificationsEnabled) {
+        addLog("(Email) Alert queued: " + message, "info");
+      }
     }
 
     function updateAlertsList() {
@@ -1198,6 +1363,7 @@
       document.documentElement.style.setProperty('--main-color', styles[theme].color);
       addLog("Theme changed to: " + theme, "ui");
       initializeThemes();
+      saveSettings();
     }
 
     // Backup Functions
@@ -1247,10 +1413,32 @@
         div.textContent = `${index + 1}. ${img} (${views} views)`;
         div.addEventListener("click", () => {
           currentSlideIndex = index;
-          updateSlide();
+          showSlide(currentSlideIndex);
+          scheduleNextChange();
         });
         adsList.appendChild(div);
       });
+    }
+
+    function isInBlackout(nowMs) {
+      if (!blackoutStart || !blackoutEnd) return false;
+      try {
+        const d = new Date(nowMs);
+        const cur = d.getHours() * 60 + d.getMinutes();
+        const [bsH, bsM] = blackoutStart.split(":").map(Number);
+        const [beH, beM] = blackoutEnd.split(":").map(Number);
+        const startMin = bsH * 60 + bsM;
+        const endMin = beH * 60 + beM;
+        if (isNaN(startMin) || isNaN(endMin)) return false;
+        if (startMin <= endMin) {
+          return cur >= startMin && cur < endMin;
+        } else {
+          // wraps past midnight
+          return cur >= startMin || cur < endMin;
+        }
+      } catch {
+        return false;
+      }
     }
 
     function updateAdminPanel() {
@@ -1386,6 +1574,18 @@
       }
       if (slideshowPaused) return;
       if (!images.length) return;
+      // Blackout handling
+      const nowCheck = getAccurateTime();
+      if (isInBlackout(nowCheck)) {
+        if (!blackoutActive) { blackoutActive = true; addLog("Blackout active", "schedule"); }
+        slide.src = "";
+        slideCounter.textContent = "Blackout";
+        slideTimer = setTimeout(scheduleNextChange, 1000);
+        return;
+      } else if (blackoutActive) {
+        blackoutActive = false;
+        addLog("Blackout ended", "schedule");
+      }
 
       const now = getAccurateTime();
       const totalCycleMs = slideDurationMs * images.length;
@@ -1478,6 +1678,25 @@
         }
       }, 100);
 
+      // Simple schedule enforcement (per-minute check)
+      setInterval(() => {
+        const now = new Date(getAccurateTime());
+        const minuteKey = now.getHours() + ":" + String(now.getMinutes()).padStart(2, "0");
+        if (minuteKey !== lastScheduleMinute) {
+          const item = schedules.find(s => s.time === minuteKey);
+          if (item) {
+            const idx = images.findIndex(i => i === item.ad);
+            if (idx >= 0) {
+              currentSlideIndex = idx;
+              showSlide(currentSlideIndex);
+              addLog("Scheduled switch to: " + item.ad + " @ " + item.time, "schedule");
+              scheduleNextChange();
+            }
+          }
+          lastScheduleMinute = minuteKey;
+        }
+      }, 1000);
+
       // Auto-backup
       setInterval(() => {
         if (autoBackupEnabled && Date.now() % 600000 < 1000) {
@@ -1489,6 +1708,27 @@
       backupNow();
     }
 
+    // Collapsible sections toggle (reduce clutter)
+    document.querySelectorAll('.adminSection h2').forEach(h => {
+      h.addEventListener('click', () => {
+        h.parentElement.classList.toggle('collapsed');
+      });
+    });
+
+    // Collapse less-used sections by default
+    document.querySelectorAll('.adminSection').forEach(sec => {
+      const title = sec.querySelector('h2')?.textContent || '';
+      if (/Remote Control|Performance|Backup|Monitoring|Maintenance/i.test(title)) {
+        sec.classList.add('collapsed');
+      }
+    });
+
+    // Network status updates
+    window.addEventListener('online', () => { networkConnected = true; updateMonitoring(); addLog('Network online', 'info'); });
+    window.addEventListener('offline', () => { networkConnected = false; updateMonitoring(); addLog('Network offline', 'warn'); });
+
+    // Load settings before starting slideshow to apply state
+    loadSettings();
     startSlideshow();
   </script>
 
