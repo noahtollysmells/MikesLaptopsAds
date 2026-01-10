@@ -742,30 +742,16 @@
     });
 
     // Initialize and start
-    async function start() {
+    function start() {
       console.log("Initializing slideshow with", images.length, "images");
       console.log("Slide duration:", slideDuration / 1000, "seconds");
       
-      // Sync with server - ULTRA AGGRESSIVE: keep trying until success
-      addLog("Starting ultra-aggressive sync...");
-      let synced = false;
-      let attempts = 0;
+      addLog("Slideshow started - attempting sync in background");
       
-      while (!synced && attempts < 30) {
-        attempts++;
-        console.log("Sync attempt", attempts);
-        synced = await syncServerTime();
-        if (synced) break;
-        
-        // Very short delay: 100ms, 200ms, 300ms, etc
-        await new Promise(r => setTimeout(r, 100 * attempts));
-      }
+      // Try to sync right away but don't block
+      syncServerTime();
       
-      if (!synced) {
-        addLog("⚠️ WARNING: Could not sync after 30 attempts - using local time");
-      }
-      
-      // Show initial slide
+      // Show initial slide immediately
       updateSlide();
       addLog("Slideshow initialized - " + images.length + " images, " + (slideDuration/1000) + "s per slide");
       
@@ -782,7 +768,7 @@
       
       // Check for emergency broadcasts every 2 seconds (all devices poll)
       setInterval(checkEmergencyBroadcast, 2000);
-      addLog(\"Emergency broadcast sync enabled - checking server every 2s\");
+      addLog("Emergency broadcast sync enabled - checking server every 2s");
     }
 
     start();
