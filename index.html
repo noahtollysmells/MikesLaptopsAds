@@ -477,40 +477,62 @@
       }
     }
 
-    // Perfect time sync using public API (all devices sync to same time)
+    // Perfect millisecond sync using multiple APIs with redundancy
     async function syncServerTime() {
       const t0 = performance.now();
       
-      try {
-        // Use worldtimeapi.org - free, fast, reliable
-        const res = await Promise.race([
-          fetch("https://worldtimeapi.org/api/timezone/Etc/UTC", { cache: "no-store" }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
-        ]);
-        
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        // Convert Unix timestamp to milliseconds
-        const serverMs = data.unixtime * 1000;
-        const localMs = Date.now();
-        const t1 = performance.now();
-        lastSyncLatency = Math.round(t1 - t0);
-        serverTimeOffset = serverMs - localMs;
-        syncedTime = true;
-        
-        addLog("✓ SYNCED to worldtimeapi.org - latency: " + lastSyncLatency + "ms");
-        syncIndicatorElement.className = "synced";
-        syncIndicatorElement.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
-        return true;
-      } catch (err) {
-        addLog("✗ Sync failed: " + err.message);
-        syncIndicatorElement.className = "error";
-        syncIndicatorElement.textContent = "🔴 SYNC ERROR";
-        
-        // Retry in 5 seconds
-        setTimeout(syncServerTime, 5000);
-        return false;
+      // Try multiple time APIs for best reliability
+      const apis = [
+        "https://worldtimeapi.org/api/timezone/Etc/UTC",
+        "https://timeapi.io/api/time/current/zone?timeZone=Etc/UTC"
+      ];
+      
+      for (const apiUrl of apis) {
+        try {
+          const res = await Promise.race([
+            fetch(apiUrl, { cache: "no-store" }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+          ]);
+          
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          
+          // Parse response based on API format
+          let serverMs;
+          if (data.unixtime) {
+            // worldtimeapi format
+            serverMs = data.unixtime * 1000;
+          } else if (data.milliSeconds) {
+            // timeapi.io format
+            serverMs = data.milliSeconds;
+          } else {
+            throw new Error("Unknown response format");
+          }
+          
+          const localMs = Date.now();
+          const t1 = performance.now();
+          lastSyncLatency = Math.round(t1 - t0);
+          serverTimeOffset = serverMs - localMs;
+          syncedTime = true;
+          
+          addLog("✓ SYNCED to " + apiUrl.split("/")[2] + " - latency: " + lastSyncLatency + "ms - offset: " + serverTimeOffset + "ms");
+          syncIndicatorElement.className = "synced";
+          syncIndicatorElement.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
+          return true;
+        } catch (err) {
+          // Try next API
+          console.log("API failed: " + apiUrl + " - " + err.message);
+        }
       }
+      
+      // All APIs failed
+      addLog("✗ Sync failed - all APIs unavailable");
+      syncIndicatorElement.className = "error";
+      syncIndicatorElement.textContent = "🔴 SYNC ERROR";
+      
+      // Retry in 3 seconds
+      setTimeout(syncServerTime, 3000);
+      return false;
     }
 
     function getServerTime() {
@@ -761,9 +783,9 @@
       console.log("Initializing slideshow with", images.length, "images");
       console.log("Slide duration:", slideDuration / 1000, "seconds");
       
-      addLog("Slideshow started - syncing to worldtimeapi.org");
+      addLog("Slideshow started - syncing for millisecond precision");
       
-      // Start syncing to public time API
+      // Sync immediately on startup
       syncServerTime();
       
       // Show initial slide immediately
@@ -778,8 +800,8 @@
         }
       }, 100);
       
-      // Resync every 30 seconds to stay accurate
-      setInterval(syncServerTime, 30000);
+      // Resync every 5 seconds for millisecond accuracy across all devices
+      setInterval(syncServerTime, 5000);
     }
 
     start();
