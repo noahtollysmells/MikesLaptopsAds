@@ -404,6 +404,9 @@
     
     let isCheckingEmergency = false;
     
+    // Sync indicator display
+    const syncIndicatorElement = document.getElementById("syncIndicator");
+    
     // Time sync variables
     let serverTimeOffset = 0;
     let syncedTime = false;
@@ -446,6 +449,12 @@
       if (document.getElementById("statusSlide")) {
         document.getElementById("statusSlide").textContent = (currentIndex + 1) + "/3";
       }
+      if (document.getElementById("statusSync")) {
+        document.getElementById("statusSync").textContent = syncedTime ? "🟢 SYNCED" : "🟡 LOCAL TIME";
+      }
+      if (document.getElementById("statusLatency")) {
+        document.getElementById("statusLatency").textContent = lastSyncLatency + "ms";
+      }
       
       // Update stats
       const uptime = Math.floor((Date.now() - startTime) / 1000);
@@ -468,9 +477,44 @@
       }
     }
 
-    // Use local time (no server needed)
+    // Perfect time sync using public API (all devices sync to same time)
+    async function syncServerTime() {
+      const t0 = performance.now();
+      
+      try {
+        // Use worldtimeapi.org - free, fast, reliable
+        const res = await Promise.race([
+          fetch("https://worldtimeapi.org/api/timezone/Etc/UTC", { cache: "no-store" }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
+        ]);
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        // Convert Unix timestamp to milliseconds
+        const serverMs = data.unixtime * 1000;
+        const localMs = Date.now();
+        const t1 = performance.now();
+        lastSyncLatency = Math.round(t1 - t0);
+        serverTimeOffset = serverMs - localMs;
+        syncedTime = true;
+        
+        addLog("✓ SYNCED to worldtimeapi.org - latency: " + lastSyncLatency + "ms");
+        syncIndicatorElement.className = "synced";
+        syncIndicatorElement.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
+        return true;
+      } catch (err) {
+        addLog("✗ Sync failed: " + err.message);
+        syncIndicatorElement.className = "error";
+        syncIndicatorElement.textContent = "🔴 SYNC ERROR";
+        
+        // Retry in 5 seconds
+        setTimeout(syncServerTime, 5000);
+        return false;
+      }
+    }
+
     function getServerTime() {
-      return Date.now();
+      return Date.now() + serverTimeOffset;
     }
 
     function updateSlide() {
@@ -546,7 +590,8 @@
     }
 
     function manualSync() {
-      addLog("Manual sync disabled - using local time");
+      addLog("Manual sync requested...");
+      syncServerTime();
     }
 
     async function checkLatency() {
@@ -716,7 +761,10 @@
       console.log("Initializing slideshow with", images.length, "images");
       console.log("Slide duration:", slideDuration / 1000, "seconds");
       
-      addLog("Slideshow started - using local time");
+      addLog("Slideshow started - syncing to worldtimeapi.org");
+      
+      // Start syncing to public time API
+      syncServerTime();
       
       // Show initial slide immediately
       updateSlide();
@@ -729,6 +777,9 @@
           updateStatusDisplay();
         }
       }, 100);
+      
+      // Resync every 30 seconds to stay accurate
+      setInterval(syncServerTime, 30000);
     }
 
     start();
