@@ -423,11 +423,11 @@
       }
     }
 
-    // Get accurate server time - MULTIPLE API FALLBACKS
+    // Get accurate server time - AGGRESSIVE API SYNCING, NO FALLBACK
     async function syncServerTime() {
       const t0 = performance.now();
       
-      // Array of time API sources to try in order
+      // Array of time API sources to try in order - with longer timeouts
       const timeSources = [
         {
           name: "worldtimeapi.org/ip",
@@ -473,15 +473,33 @@
             const data = await res.json();
             return new Date(data.datetime).getTime();
           }
+        },
+        {
+          name: "worldtimeapi.org/Paris",
+          fetch: async () => {
+            const res = await fetch("https://worldtimeapi.org/api/timezone/Europe/Paris", { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return new Date(data.datetime).getTime();
+          }
+        },
+        {
+          name: "timeapi.io/Amsterdam",
+          fetch: async () => {
+            const res = await fetch("https://timeapi.io/api/Time/current/timeZone?timeZone=Europe/Amsterdam", { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return new Date(data.dateTime).getTime();
+          }
         }
       ];
       
-      // Try each source in order
+      // Try each source in order with 8 second timeout each
       for (const source of timeSources) {
         try {
           const serverMs = await Promise.race([
             source.fetch(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500))
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
           ]);
           
           const localMs = Date.now();
@@ -495,19 +513,18 @@
           syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
           return true;
         } catch (err) {
-          addLog("⚠️ " + source.name + " failed: " + err.message);
+          addLog("✗ " + source.name + " failed: " + err.message);
           // Continue to next source
         }
       }
       
-      // All sources failed - fall back to local time
-      lastSyncLatency = 0;
-      serverTimeOffset = 0;
-      syncedTime = false;
+      // If we get here, keep retrying the first API every 2 seconds
+      addLog("⚠️ All APIs failed, retrying first source in 2s...");
+      syncIndicator.className = "error";
+      syncIndicator.textContent = "🔴 RETRYING...";
       
-      addLog("⚠️ All time APIs failed - using local time");
-      syncIndicator.className = "local";
-      syncIndicator.textContent = "⚪ LOCAL TIME";
+      // Retry the first API after 2 seconds
+      setTimeout(syncServerTime, 2000);
       return false;
     }
 
