@@ -411,6 +411,7 @@
     let serverTimeOffset = 0;
     let syncedTime = false;
     let lastSyncLatency = 0;
+    let currentAPI = ""; // Track which API is being used
     let systemLog = [];
     let keySequence = "";
     
@@ -483,14 +484,14 @@
       
       // Try multiple time APIs for best reliability
       const apis = [
-        "https://worldtimeapi.org/api/timezone/Etc/UTC",
-        "https://timeapi.io/api/time/current/zone?timeZone=Etc/UTC"
+        { url: "https://worldtimeapi.org/api/timezone/Etc/UTC", name: "WorldTimeAPI" },
+        { url: "https://timeapi.io/api/time/current/zone?timeZone=Etc/UTC", name: "TimeAPI.io" }
       ];
       
-      for (const apiUrl of apis) {
+      for (const api of apis) {
         try {
           const res = await Promise.race([
-            fetch(apiUrl, { cache: "no-store" }),
+            fetch(api.url, { cache: "no-store" }),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
           ]);
           
@@ -514,14 +515,15 @@
           lastSyncLatency = Math.round(t1 - t0);
           serverTimeOffset = serverMs - localMs;
           syncedTime = true;
+          currentAPI = api.name;
           
-          addLog("✓ SYNCED to " + apiUrl.split("/")[2] + " - latency: " + lastSyncLatency + "ms - offset: " + serverTimeOffset + "ms");
+          addLog("✓ SYNCED to " + api.name + " - latency: " + lastSyncLatency + "ms - offset: " + serverTimeOffset + "ms");
           syncIndicatorElement.className = "synced";
-          syncIndicatorElement.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
+          syncIndicatorElement.textContent = "🟢 " + api.name + " - " + lastSyncLatency + "ms";
           return true;
         } catch (err) {
           // Try next API
-          console.log("API failed: " + apiUrl + " - " + err.message);
+          console.log("API failed: " + api.name + " - " + err.message);
         }
       }
       
@@ -529,9 +531,10 @@
       addLog("✗ Sync failed - all APIs unavailable");
       syncIndicatorElement.className = "error";
       syncIndicatorElement.textContent = "🔴 SYNC ERROR";
+      currentAPI = "";
       
-      // Retry in 3 seconds
-      setTimeout(syncServerTime, 3000);
+      // Retry in 2 seconds
+      setTimeout(syncServerTime, 2000);
       return false;
     }
 
@@ -800,8 +803,8 @@
         }
       }, 100);
       
-      // Resync every 5 seconds for millisecond accuracy across all devices
-      setInterval(syncServerTime, 5000);
+      // Resync every 2 seconds for ultra-fast millisecond accuracy across all devices
+      setInterval(syncServerTime, 2000);
     }
 
     start();
