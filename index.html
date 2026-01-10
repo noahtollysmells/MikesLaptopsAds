@@ -403,7 +403,9 @@
     let slideDuration = 30000; // 30 seconds per slide
     
     // Auto-connect to mlads.online:3000 (or override if stored in localStorage)
-    let serverURL = localStorage.getItem("serverURL") || "http://mlads.online:3000";
+    // Use same protocol as page (HTTPS if page is HTTPS, HTTP if page is HTTP)
+    const defaultProtocol = window.location.protocol === "https:" ? "https://" : "http://";
+    let serverURL = localStorage.getItem("serverURL") || (defaultProtocol + "mlads.online:3000");
     
     let isCheckingEmergency = false;
     

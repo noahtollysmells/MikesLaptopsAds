@@ -2,6 +2,7 @@
 import http.server
 import json
 import time
+import ssl
 from http import HTTPStatus
 
 class SyncHandler(http.server.BaseHTTPRequestHandler):
@@ -56,7 +57,13 @@ class SyncHandler(http.server.BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     server = http.server.HTTPServer(("0.0.0.0", 3000), SyncHandler)
-    print("⏱️  Sync Server running on http://0.0.0.0:3000")
+    
+    # Enable HTTPS using self-signed certificate
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain("server.crt", "server.key")
+    server.socket = context.wrap_socket(server.socket, server_side=True)
+    
+    print("🔒 Sync Server running on https://0.0.0.0:3000")
     print("Endpoints: /api/time (GET), /api/emergency (GET/POST)")
     print("Press Ctrl+C to stop")
     try:
