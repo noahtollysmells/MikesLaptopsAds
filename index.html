@@ -423,63 +423,92 @@
       }
     }
 
-    // Get accurate server time - SIMPLE AND RELIABLE with fallbacks
+    // Get accurate server time - MULTIPLE API FALLBACKS
     async function syncServerTime() {
       const t0 = performance.now();
       
-      try {
-        // Try primary source first
-        try {
-          const res = await Promise.race([
-            fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
-          ]);
-          
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
-          const serverMs = new Date(data.datetime).getTime();
-          const localMs = Date.now();
-          const t1 = performance.now();
-          lastSyncLatency = Math.round(t1 - t0);
-          serverTimeOffset = serverMs - localMs;
-          syncedTime = true;
-          
-          addLog("✓ SYNCED - latency: " + lastSyncLatency + "ms");
-          syncIndicator.className = "synced";
-          syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
-          return true;
-        } catch (err1) {
-          // Try fallback source
-          const res = await Promise.race([
-            fetch("https://timeapi.io/api/Time/current/zone?timeZone=UTC", { cache: "no-store" }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
-          ]);
-          
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
-          const serverMs = new Date(data.dateTime).getTime();
-          const localMs = Date.now();
-          const t1 = performance.now();
-          lastSyncLatency = Math.round(t1 - t0);
-          serverTimeOffset = serverMs - localMs;
-          syncedTime = true;
-          
-          addLog("✓ SYNCED (fallback) - latency: " + lastSyncLatency + "ms");
-          syncIndicator.className = "synced";
-          syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
-          return true;
+      // Array of time API sources to try in order
+      const timeSources = [
+        {
+          name: "worldtimeapi.org/ip",
+          fetch: async () => {
+            const res = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return new Date(data.datetime).getTime();
+          }
+        },
+        {
+          name: "timeapi.io/UTC",
+          fetch: async () => {
+            const res = await fetch("https://timeapi.io/api/Time/current/zone?timeZone=UTC", { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return new Date(data.dateTime).getTime();
+          }
+        },
+        {
+          name: "worldtimeapi.org/UTC",
+          fetch: async () => {
+            const res = await fetch("https://worldtimeapi.org/api/timezone/UTC", { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return new Date(data.datetime).getTime();
+          }
+        },
+        {
+          name: "timeapi.io/London",
+          fetch: async () => {
+            const res = await fetch("https://timeapi.io/api/Time/current/timeZone?timeZone=Europe/London", { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return new Date(data.dateTime).getTime();
+          }
+        },
+        {
+          name: "worldtimeapi.org/London",
+          fetch: async () => {
+            const res = await fetch("https://worldtimeapi.org/api/timezone/Europe/London", { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return new Date(data.datetime).getTime();
+          }
         }
-      } catch (err) {
-        // Fall back to local time - slides continue to work
-        lastSyncLatency = 0;
-        serverTimeOffset = 0;
-        syncedTime = false;
-        
-        addLog("⚠️ Using local time (sync failed: " + err.message + ")");
-        syncIndicator.className = "local";
-        syncIndicator.textContent = "⚪ LOCAL TIME";
-        return false;
+      ];
+      
+      // Try each source in order
+      for (const source of timeSources) {
+        try {
+          const serverMs = await Promise.race([
+            source.fetch(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500))
+          ]);
+          
+          const localMs = Date.now();
+          const t1 = performance.now();
+          lastSyncLatency = Math.round(t1 - t0);
+          serverTimeOffset = serverMs - localMs;
+          syncedTime = true;
+          
+          addLog("✓ SYNCED (" + source.name + ") - latency: " + lastSyncLatency + "ms");
+          syncIndicator.className = "synced";
+          syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
+          return true;
+        } catch (err) {
+          addLog("⚠️ " + source.name + " failed: " + err.message);
+          // Continue to next source
+        }
       }
+      
+      // All sources failed - fall back to local time
+      lastSyncLatency = 0;
+      serverTimeOffset = 0;
+      syncedTime = false;
+      
+      addLog("⚠️ All time APIs failed - using local time");
+      syncIndicator.className = "local";
+      syncIndicator.textContent = "⚪ LOCAL TIME";
+      return false;
     }
 
     function getServerTime() {
