@@ -78,30 +78,70 @@
     let serverTimeOffset = 0; // Milliseconds to add to Date.now() to get server time
     let syncedTime = false;
 
-    // Get accurate server time
+    // Get accurate server time - TRY MULTIPLE SOURCES
     async function syncServerTime() {
       try {
-        console.log("Syncing with server time...");
-        const response = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
-        const data = await response.json();
-        const serverMs = new Date(data.datetime).getTime();
-        const localMs = Date.now();
-        serverTimeOffset = serverMs - localMs;
-        syncedTime = true;
-        console.log("✓ Time synced! Offset:", serverTimeOffset, "ms");
+        console.log("Attempting to sync with server time...");
         
-        // Update indicator
-        syncIndicator.className = "synced";
-        syncIndicator.textContent = "🟢 SYNCED (Server Time)";
-        return true;
+        // Try multiple sync sources
+        const syncSources = [
+          { name: "worldtimeapi", url: "https://worldtimeapi.org/api/ip", parser: (data) => new Date(data.datetime).getTime() },
+          { name: "cloudflare", url: "https://time.cloudflare.com/api/v1/now", parser: (data) => data.now_ms }
+        ];
+        
+        let synced = false;
+        
+        for (const source of syncSources) {
+          try {
+            console.log("Trying sync source:", source.name);
+            const response = await fetch(source.url, { cache: "no-store", timeout: 5000 });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            const serverMs = source.parser(data);
+            const localMs = Date.now();
+            serverTimeOffset = serverMs - localMs;
+            syncedTime = true;
+            synced = true;
+            
+            console.log("✓ SYNCED with", source.name, "| Offset:", serverTimeOffset, "ms");
+            syncIndicator.className = "synced";
+            syncIndicator.textContent = "🟢 SYNCED (" + source.name + ")";
+            return true;
+          } catch (err) {
+            console.warn("Failed with", source.name + ":", err.message);
+          }
+        }
+        
+        // If all sources failed, try HEAD request for Date header
+        if (!synced) {
+          console.log("Trying fallback: HEAD request for Date header");
+          try {
+            const response = await fetch(window.location.href, { method: "HEAD", cache: "no-store" });
+            const dateHeader = response.headers.get("date");
+            if (dateHeader) {
+              const serverMs = new Date(dateHeader).getTime();
+              const localMs = Date.now();
+              serverTimeOffset = serverMs - localMs;
+              syncedTime = true;
+              console.log("✓ SYNCED via HEAD request | Offset:", serverTimeOffset, "ms");
+              syncIndicator.className = "synced";
+              syncIndicator.textContent = "🟢 SYNCED (Local Server)";
+              return true;
+            }
+          } catch (err) {
+            console.warn("HEAD request failed:", err.message);
+          }
+        }
+        
+        throw new Error("All sync sources failed");
       } catch (err) {
-        console.warn("Sync failed, using local time:", err.message);
+        console.error("SYNC ERROR:", err.message);
         serverTimeOffset = 0;
         syncedTime = false;
         
-        // Update indicator
         syncIndicator.className = "local";
-        syncIndicator.textContent = "🟡 LOCAL TIME (Offline)";
+        syncIndicator.textContent = "🟡 OFFLINE - " + err.message;
         return false;
       }
     }
@@ -127,8 +167,25 @@
       console.log("Initializing slideshow with", images.length, "images");
       console.log("Slide duration:", slideDuration / 1000, "seconds");
       
-      // Sync with server
-      await syncServerTime();
+      // Sync with server - TRY UP TO 5 TIMES
+      let syncAttempts = 0;
+      let synced = false;
+      
+      while (syncAttempts < 5 && !synced) {
+        console.log("Sync attempt", syncAttempts + 1, "of 5");
+        synced = await syncServerTime();
+        if (!synced) {
+          syncAttempts++;
+          if (syncAttempts < 5) {
+            await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds before retry
+          }
+        }
+      }
+      
+      if (!synced) {
+        console.error("FAILED TO SYNC AFTER 5 ATTEMPTS - Using local time as fallback");
+        syncIndicator.textContent = "🟡 USING LOCAL TIME (No network)";
+      }
       
       // Show initial slide
       updateSlide();
