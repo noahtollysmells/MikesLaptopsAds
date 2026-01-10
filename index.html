@@ -419,59 +419,65 @@
       }
     }
 
-    // Get accurate server time - WORLDTIMEAPI ONLY (RESILIENT WITH RETRY)
+    // Get accurate server time - MULTIPLE SOURCES WITH FAST PARALLEL SYNC
     async function syncServerTime() {
-      const maxRetries = 5;
-      const baseDelay = 500;
+      const t0 = performance.now();
       
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          const t0 = performance.now();
-          
-          // Create abort controller with 8 second timeout
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000);
-          
-          const response = await fetch("https://worldtimeapi.org/api/ip", { 
-            cache: "no-store",
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
-          
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          
-          const data = await response.json();
-          const serverMs = new Date(data.datetime).getTime();
-          const localMs = Date.now();
-          const t1 = performance.now();
-          lastSyncLatency = Math.round(t1 - t0);
-          serverTimeOffset = serverMs - localMs;
-          syncedTime = true;
-          
-          addLog("✓ SYNCED [attempt " + (attempt + 1) + "] - latency: " + lastSyncLatency + "ms");
-          syncIndicator.className = "synced";
-          syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
-          return true;
-        } catch (err) {
-          totalErrors++;
-          addLog("✗ Sync attempt " + (attempt + 1) + " failed: " + err.message);
-          
-          if (attempt < maxRetries - 1) {
-            // Exponential backoff: 500ms, 1s, 2s, 4s, 8s
-            const delay = baseDelay * Math.pow(2, attempt);
-            await new Promise(r => setTimeout(r, delay));
-          }
+      // Multiple time sources to try in parallel
+      const sources = [
+        async () => {
+          const res = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
+          const data = await res.json();
+          return { time: new Date(data.datetime).getTime(), source: "WorldTimeAPI" };
+        },
+        async () => {
+          const res = await fetch("https://timeapi.io/api/Time/current/zone?timeZone=UTC", { cache: "no-store" });
+          const data = await res.json();
+          return { time: new Date(data.dateTime).getTime(), source: "TimeAPI.io" };
+        },
+        async () => {
+          const res = await fetch("http://worldclockapi.com/api/json/utc/now", { cache: "no-store" });
+          const data = await res.json();
+          return { time: new Date(data.currentDateTime).getTime(), source: "WorldClockAPI" };
         }
-      }
+      ];
       
-      // All retries exhausted
-      totalErrors++;
-      serverTimeOffset = 0;
-      syncedTime = false;
-      addLog("✗ SYNC FAILED AFTER 5 ATTEMPTS");
-      syncIndicator.className = "error";
-      syncIndicator.textContent = "🔴 SYNC ERROR";
-      return false;
+      try {
+        // Race all sources with 3 second timeout each
+        const promises = sources.map(src => 
+          Promise.race([
+            src(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+          ])
+        );
+        
+        // Wait for first successful response
+        const result = await Promise.race(
+          promises.map(p => p.catch(e => null))
+        ).then(r => r || Promise.race(promises));
+        
+        if (!result) throw new Error("All sources failed");
+        
+        const serverMs = result.time;
+        const localMs = Date.now();
+        const t1 = performance.now();
+        lastSyncLatency = Math.round(t1 - t0);
+        serverTimeOffset = serverMs - localMs;
+        syncedTime = true;
+        
+        addLog("✓ SYNCED via " + result.source + " - latency: " + lastSyncLatency + "ms");
+        syncIndicator.className = "synced";
+        syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
+        return true;
+      } catch (err) {
+        totalErrors++;
+        addLog("✗ Sync failed: " + err.message);
+        serverTimeOffset = 0;
+        syncedTime = false;
+        syncIndicator.className = "error";
+        syncIndicator.textContent = "🔴 SYNC ERROR";
+        return false;
+      }
     }
 
     function getServerTime() {
@@ -713,21 +719,23 @@
       console.log("Initializing slideshow with", images.length, "images");
       console.log("Slide duration:", slideDuration / 1000, "seconds");
       
-      // Sync with server - AGGRESSIVE: guaranteed sync on startup
-      addLog("Starting aggressive sync...");
+      // Sync with server - ULTRA AGGRESSIVE: keep trying until success
+      addLog("Starting ultra-aggressive sync...");
       let synced = false;
       let attempts = 0;
       
-      while (!synced && attempts < 10) {
+      while (!synced && attempts < 20) {
         attempts++;
         console.log("Sync attempt", attempts);
         synced = await syncServerTime();
         if (synced) break;
         
-        if (attempts < 10) {
-          const delay = 300 * attempts; // 300ms, 600ms, 900ms, etc.
-          await new Promise(r => setTimeout(r, delay));
-        }
+        // Short delay between attempts: 200ms, 400ms, 600ms, etc
+        await new Promise(r => setTimeout(r, 200 * attempts));
+      }
+      
+      if (!synced) {
+        addLog("⚠️ WARNING: Could not sync after 20 attempts - using local time");
       }
       
       // Show initial slide
@@ -742,8 +750,8 @@
         }
       }, 100);
       
-      // Resync every 2 minutes to stay accurate
-      setInterval(syncServerTime, 120000);
+      // Resync every 1 minute to stay accurate
+      setInterval(syncServerTime, 60000);
     }
 
     start();
