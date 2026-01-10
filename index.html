@@ -205,6 +205,58 @@
       padding: 20px;
       animation: pulse 1s infinite;
     }
+    #setupModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #00ff99;
+      font-family: Arial, sans-serif;
+    }
+    #setupModal.show {
+      display: flex;
+    }
+    #setupModal h1 {
+      font-size: 36px;
+      margin-bottom: 30px;
+      color: #ff0000;
+      text-shadow: 0 0 10px #ff0000;
+    }
+    #setupModal p {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #aaa;
+    }
+    #setupModal input {
+      width: 300px;
+      padding: 12px;
+      font-size: 16px;
+      background: rgba(0, 255, 153, 0.1);
+      border: 2px solid #00ff99;
+      color: #00ff99;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    #setupModal button {
+      background: #00ff99;
+      color: #000;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    #setupModal button:hover {
+      background: #00dd77;
+    }
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
@@ -212,6 +264,13 @@
   </style>
 </head>
 <body>
+  <div id="setupModal" class="show">
+    <h1>🚀 AD SYNC SETUP 🚀</h1>
+    <p>Enter the Linux Mint server IP address:</p>
+    <input type="text" id="serverIPInput" placeholder="e.g., 192.168.1.50" />
+    <button onclick="saveServerConfig()">CONNECT</button>
+  </div>
+
   <div id="syncIndicator" class="local">⚪ SYNCING...</div>
   
   <div id="emergencyOverlay"></div>
@@ -315,6 +374,7 @@
         <button class="admin-btn" onclick="clearLogs()">Clear Logs</button>
         <button class="admin-btn" onclick="exportLogs()">💾 Export Logs</button>
         <button class="admin-btn" onclick="resetStats()">📊 Reset Stats</button>
+        <button class="admin-btn" onclick="clearServerConfig()" style="background: #ff6600;">⚙️ Reconfigure Server</button>
       </div>
 
       <div class="admin-section" style="grid-column: 1/-1;">
@@ -349,8 +409,17 @@
     const logViewer = document.getElementById("logViewer");
     let slideDuration = 30000; // 30 seconds per slide
     
-    // Server configuration for emergency broadcast
-    const serverURL = "http://localhost:3000";
+    // Server configuration - load from localStorage or prompt user
+    let serverURL = localStorage.getItem("serverURL") || "http://localhost:3000";
+    let isServerConfigured = !!localStorage.getItem("serverURL");
+    
+    // Check if setup modal should show
+    if (!isServerConfigured) {
+      document.getElementById("setupModal").classList.add("show");
+    } else {
+      document.getElementById("setupModal").classList.remove("show");
+    }
+    
     let isCheckingEmergency = false;
     
     // Time sync variables
@@ -423,109 +492,38 @@
       }
     }
 
-    // Get accurate server time - AGGRESSIVE API SYNCING, NO FALLBACK
+    // Get accurate server time from local Python sync server
     async function syncServerTime() {
       const t0 = performance.now();
       
-      // Array of time API sources to try in order - with longer timeouts
-      const timeSources = [
-        {
-          name: "worldtimeapi.org/ip",
-          fetch: async () => {
-            const res = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            return new Date(data.datetime).getTime();
-          }
-        },
-        {
-          name: "timeapi.io/UTC",
-          fetch: async () => {
-            const res = await fetch("https://timeapi.io/api/Time/current/zone?timeZone=UTC", { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            return new Date(data.dateTime).getTime();
-          }
-        },
-        {
-          name: "worldtimeapi.org/UTC",
-          fetch: async () => {
-            const res = await fetch("https://worldtimeapi.org/api/timezone/UTC", { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            return new Date(data.datetime).getTime();
-          }
-        },
-        {
-          name: "timeapi.io/London",
-          fetch: async () => {
-            const res = await fetch("https://timeapi.io/api/Time/current/timeZone?timeZone=Europe/London", { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            return new Date(data.dateTime).getTime();
-          }
-        },
-        {
-          name: "worldtimeapi.org/London",
-          fetch: async () => {
-            const res = await fetch("https://worldtimeapi.org/api/timezone/Europe/London", { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            return new Date(data.datetime).getTime();
-          }
-        },
-        {
-          name: "worldtimeapi.org/Paris",
-          fetch: async () => {
-            const res = await fetch("https://worldtimeapi.org/api/timezone/Europe/Paris", { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            return new Date(data.datetime).getTime();
-          }
-        },
-        {
-          name: "timeapi.io/Amsterdam",
-          fetch: async () => {
-            const res = await fetch("https://timeapi.io/api/Time/current/timeZone?timeZone=Europe/Amsterdam", { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            return new Date(data.dateTime).getTime();
-          }
-        }
-      ];
-      
-      // Try each source in order with 8 second timeout each
-      for (const source of timeSources) {
-        try {
-          const serverMs = await Promise.race([
-            source.fetch(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
-          ]);
-          
-          const localMs = Date.now();
-          const t1 = performance.now();
-          lastSyncLatency = Math.round(t1 - t0);
-          serverTimeOffset = serverMs - localMs;
-          syncedTime = true;
-          
-          addLog("✓ SYNCED (" + source.name + ") - latency: " + lastSyncLatency + "ms");
-          syncIndicator.className = "synced";
-          syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
-          return true;
-        } catch (err) {
-          addLog("✗ " + source.name + " failed: " + err.message);
-          // Continue to next source
-        }
+      try {
+        const res = await Promise.race([
+          fetch("http://localhost:3000/api/time", { cache: "no-store" }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+        ]);
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const serverMs = data.timestamp;
+        const localMs = Date.now();
+        const t1 = performance.now();
+        lastSyncLatency = Math.round(t1 - t0);
+        serverTimeOffset = serverMs - localMs;
+        syncedTime = true;
+        
+        addLog("✓ SYNCED (local server) - latency: " + lastSyncLatency + "ms");
+        syncIndicator.className = "synced";
+        syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
+        return true;
+      } catch (err) {
+        addLog("✗ Sync failed: " + err.message);
+        syncIndicator.className = "error";
+        syncIndicator.textContent = "🔴 SYNC ERROR";
+        
+        // Retry in 2 seconds
+        setTimeout(syncServerTime, 2000);
+        return false;
       }
-      
-      // If we get here, keep retrying the first API every 2 seconds
-      addLog("⚠️ All APIs failed, retrying first source in 2s...");
-      syncIndicator.className = "error";
-      syncIndicator.textContent = "🔴 RETRYING...";
-      
-      // Retry the first API after 2 seconds
-      setTimeout(syncServerTime, 2000);
-      return false;
     }
 
     function getServerTime() {
@@ -578,8 +576,8 @@
       }
     }
 
-    // Admin panel functions
-    function nextSlide() {
+    function updateSlide() {
+      if (isPaused || emergencyMode) return;
       currentIndex = (currentIndex + 1) % images.length;
       slideElement.src = images[currentIndex];
       addLog("Manual slide change: " + (currentIndex + 1));
@@ -598,6 +596,35 @@
         slideDuration = newDuration;
         addLog("Slide duration changed to " + input.value + "s");
       }
+    }
+
+    // Setup and config functions
+    function saveServerConfig() {
+      const ip = document.getElementById("serverIPInput").value.trim();
+      if (!ip) {
+        alert("Please enter a server IP address");
+        return;
+      }
+      
+      // Format: IP or IP:port
+      let url = ip;
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        url = "http://" + url;
+      }
+      if (!url.includes(":3000") && !url.includes(":")) {
+        url = url + ":3000";
+      }
+      
+      serverURL = url;
+      localStorage.setItem("serverURL", url);
+      document.getElementById("setupModal").classList.remove("show");
+      addLog("✓ Server configured: " + url);
+      syncServerTime();
+    }
+
+    function clearServerConfig() {
+      localStorage.removeItem("serverURL");
+      window.location.reload();
     }
 
     function manualSync() {
