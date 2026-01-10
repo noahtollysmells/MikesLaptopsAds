@@ -56,28 +56,37 @@
       border-left-color: #ffaa00;
       color: #ffaa00;
     }
-    #syncIndicator.error {
-      border-left-color: #ff0000;
-      color: #ff0000;
-    }
-    #adminPanel {
+    #alarmFlash {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 1000;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 40px 60px;
+      background: rgba(255, 0, 0, 0.9);
+      border: 4px solid #ffff00;
+      border-radius: 20px;
       font-family: Arial, sans-serif;
-      color: #00ff99;
-      padding: 20px;
-      overflow-y: auto;
-      overflow-x: hidden;
+      font-size: 48px;
+      font-weight: bold;
+      color: #ffff00;
+      z-index: 2000;
+      text-align: center;
+      animation: flashBounce 0.6s ease-in-out;
+      box-shadow: 0 0 30px #ff0000, 0 0 60px #ffff00;
+      text-shadow: 0 0 20px #ffff00;
     }
+    @keyframes flashBounce {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    #alarmFlash.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     #adminPanel.open {
       display: flex;
     }
@@ -266,6 +275,8 @@
 <body>
   <div id="syncIndicator" class="local">⚪ SYNCING...</div>
   
+  <div id="alarmFlash"></div>
+  
   <div id="emergencyOverlay"></div>
   
   <div id="slideshow">
@@ -446,48 +457,15 @@
       }
     }
 
-    // Play TERRIFYING alarm sound when sync fails
+    // Play TERRIFYING alarm sound from MP3 file
     function playAlarmSound(forcePlay = false) {
       if (!syncAlarmEnabled && !forcePlay) return;
       
-      // Create audio context for synthesized alarm
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const duration = 0.6; // 0.6 seconds of FAST pure terror
-      
-      // Create MANY oscillators with chaotic frequencies for maximum terror
-      const frequencies = [
-        { start: 80, end: 1200, type: 'sawtooth' },
-        { start: 120, end: 950, type: 'square' },
-        { start: 200, end: 1400, type: 'sawtooth' },
-        { start: 150, end: 1100, type: 'triangle' },
-        { start: 90, end: 1300, type: 'sawtooth' },
-        { start: 180, end: 1000, type: 'square' },
-        { start: 110, end: 1250, type: 'triangle' }
-      ];
-      
-      frequencies.forEach((freqConfig, idx) => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        // Chaotic frequency sweeps for maximum horror
-        oscillator.frequency.setValueAtTime(freqConfig.start, audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(freqConfig.end, audioContext.currentTime + duration * 0.7);
-        oscillator.frequency.exponentialRampToValueAtTime(freqConfig.start * 0.8, audioContext.currentTime + duration);
-        
-        // Different wave types for dissonant chaos
-        oscillator.type = freqConfig.type;
-        
-        // EXTREMELY LOUD - maximum volume for maximum terror
-        gainNode.gain.setValueAtTime(0.95, audioContext.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.85, audioContext.currentTime + duration * 0.3);
-        gainNode.gain.exponentialRampToValueAtTime(0.02, audioContext.currentTime + duration);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + duration);
-      });
+      // Create and play the alarm MP3
+      const alarm = new Audio('syncalarm.mp3');
+      alarm.volume = 1.0; // Maximum volume
+      alarm.currentTime = 0; // Start from beginning
+      alarm.play().catch(err => console.log("Alarm play failed:", err));
       
       if (forcePlay) {
         addLog("🚨 ALARM TEST - Hold 'A' to continue - MAXIMUM VOLUME WARNING");
@@ -770,9 +748,31 @@
       addLog("Auto-dim " + (autoDimEnabled ? "enabled" : "disabled"));
     }
 
+    function showAlarmFlash() {
+      const flashElement = document.getElementById("alarmFlash");
+      const state = syncAlarmEnabled ? "🚨 ALARM ENABLED" : "⭕ ALARM DISABLED";
+      const color = syncAlarmEnabled ? "#ff0000" : "#ffff00";
+      
+      flashElement.textContent = state;
+      flashElement.style.borderColor = color;
+      flashElement.style.color = color;
+      flashElement.style.textShadow = "0 0 20px " + color;
+      flashElement.style.boxShadow = "0 0 30px " + color + ", 0 0 60px " + color;
+      
+      flashElement.classList.remove("show");
+      flashElement.offsetHeight; // Force reflow to restart animation
+      flashElement.classList.add("show");
+      
+      // Hide flash after animation
+      setTimeout(() => {
+        flashElement.classList.remove("show");
+      }, 600);
+    }
+    
     function toggleSyncAlarm() {
       syncAlarmEnabled = !syncAlarmEnabled;
       addLog("🚨 Sync alarm " + (syncAlarmEnabled ? "ENABLED - will play loud warning on sync failure" : "DISABLED"));
+      showAlarmFlash();
     }
 
     function toggleEmergency() {
@@ -837,6 +837,12 @@
       // Press F for fullscreen
       if (e.key === "f" || e.key === "F") {
         toggleFullscreen();
+        return;
+      }
+      
+      // Press T to toggle sync alarm and show state
+      if ((e.key === "t" || e.key === "T") && !e.repeat) {
+        toggleSyncAlarm();
         return;
       }
       
