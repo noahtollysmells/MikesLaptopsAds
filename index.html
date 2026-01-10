@@ -274,75 +274,48 @@
       }
     }
 
-    // Get accurate server time - TRY MULTIPLE SOURCES
+    // Get accurate server time - FAST PARALLEL REQUESTS
     async function syncServerTime() {
+      const t0 = performance.now();
+      
+      // Parallel requests with short timeout
+      const withTimeout = (promise, ms) => Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms))
+      ]);
+      
+      const syncSources = [
+        { name: "worldtimeapi", fetch: () => withTimeout(fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" }).then(r => r.json()), 2000).then(d => new Date(d.datetime).getTime()) },
+        { name: "cloudflare", fetch: () => withTimeout(fetch("https://time.cloudflare.com/api/v1/now", { cache: "no-store" }).then(r => r.json()), 2000).then(d => d.now_ms) },
+        { name: "local-head", fetch: () => withTimeout(fetch(window.location.href, { method: "HEAD", cache: "no-store" }), 1000).then(r => new Date(r.headers.get("date")).getTime()) }
+      ];
+      
       try {
-        const t0 = performance.now();
-        console.log("Attempting to sync with server time...");
+        // Try ALL sources in parallel - take first success
+        const results = await Promise.allSettled(syncSources.map(s => s.fetch()));
+        const successful = results.findIndex(r => r.status === "fulfilled");
         
-        // Try multiple sync sources
-        const syncSources = [
-          { name: "worldtimeapi", url: "https://worldtimeapi.org/api/ip", parser: (data) => new Date(data.datetime).getTime() },
-          { name: "cloudflare", url: "https://time.cloudflare.com/api/v1/now", parser: (data) => data.now_ms }
-        ];
-        
-        let synced = false;
-        
-        for (const source of syncSources) {
-          try {
-            console.log("Trying sync source:", source.name);
-            const response = await fetch(source.url, { cache: "no-store" });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const data = await response.json();
-            const serverMs = source.parser(data);
-            const localMs = Date.now();
-            const t1 = performance.now();
-            lastSyncLatency = Math.round(t1 - t0);
-            serverTimeOffset = serverMs - localMs;
-            syncedTime = true;
-            synced = true;
-            
-            addLog("✓ SYNCED with " + source.name + " (latency: " + lastSyncLatency + "ms)");
-            syncIndicator.className = "synced";
-            syncIndicator.textContent = "🟢 SYNCED (" + source.name + " - " + lastSyncLatency + "ms)";
-            return true;
-          } catch (err) {
-            console.warn("Failed with", source.name + ":", err.message);
-          }
+        if (successful !== -1) {
+          const serverMs = results[successful].value;
+          const localMs = Date.now();
+          const t1 = performance.now();
+          lastSyncLatency = Math.round(t1 - t0);
+          serverTimeOffset = serverMs - localMs;
+          syncedTime = true;
+          
+          addLog("✓ SYNCED (latency: " + lastSyncLatency + "ms)");
+          syncIndicator.className = "synced";
+          syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
+          return true;
         }
         
-        // If all sources failed, try HEAD request for Date header
-        if (!synced) {
-          console.log("Trying fallback: HEAD request for Date header");
-          try {
-            const response = await fetch(window.location.href, { method: "HEAD", cache: "no-store" });
-            const dateHeader = response.headers.get("date");
-            if (dateHeader) {
-              const serverMs = new Date(dateHeader).getTime();
-              const localMs = Date.now();
-              const t1 = performance.now();
-              lastSyncLatency = Math.round(t1 - t0);
-              serverTimeOffset = serverMs - localMs;
-              syncedTime = true;
-              addLog("✓ SYNCED via local server (latency: " + lastSyncLatency + "ms)");
-              syncIndicator.className = "synced";
-              syncIndicator.textContent = "🟢 SYNCED (local - " + lastSyncLatency + "ms)";
-              return true;
-            }
-          } catch (err) {
-            console.warn("HEAD request failed:", err.message);
-          }
-        }
-        
-        throw new Error("All sync sources failed");
+        throw new Error("All sources failed");
       } catch (err) {
-        console.error("SYNC ERROR:", err.message);
         serverTimeOffset = 0;
         syncedTime = false;
-        addLog("✗ Sync failed: " + err.message);
+        addLog("✗ Using local time");
         syncIndicator.className = "local";
-        syncIndicator.textContent = "🟡 OFFLINE";
+        syncIndicator.textContent = "🟡 LOCAL TIME";
         return false;
       }
     }
@@ -441,24 +414,11 @@
       console.log("Initializing slideshow with", images.length, "images");
       console.log("Slide duration:", slideDuration / 1000, "seconds");
       
-      // Sync with server - TRY UP TO 5 TIMES
-      let syncAttempts = 0;
-      let synced = false;
-      
-      while (syncAttempts < 5 && !synced) {
-        console.log("Sync attempt", syncAttempts + 1, "of 5");
-        synced = await syncServerTime();
-        if (!synced) {
-          syncAttempts++;
-          if (syncAttempts < 5) {
-            await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds before retry
-          }
-        }
-      }
-      
+      // Sync with server - FAST: 2 attempts max with 500ms retry
+      let synced = await syncServerTime();
       if (!synced) {
-        console.error("FAILED TO SYNC AFTER 5 ATTEMPTS - Using local time as fallback");
-        syncIndicator.textContent = "🟡 USING LOCAL TIME (No network)";
+        await new Promise(r => setTimeout(r, 500));
+        synced = await syncServerTime();
       }
       
       // Show initial slide
