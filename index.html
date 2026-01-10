@@ -433,6 +433,118 @@
 
     /* Simple collapsible sections */
     .adminSection.collapsed > *:not(h2) { display: none; }
+
+    /* Admin Panel Themes */
+    #adminPanel {
+      --panel-bg: rgba(0, 0, 0, 0.95);
+      --panel-text: #ffffff;
+      --panel-accent: #00ff99;
+      --panel-section-bg: rgba(255, 255, 255, 0.05);
+      --panel-border: rgba(0, 255, 153, 0.3);
+      --panel-button-bg: #00ff99;
+      --panel-button-text: #000000;
+    }
+
+    #adminPanel.theme-dark {
+      --panel-bg: rgba(0, 0, 0, 0.95);
+      --panel-text: #ffffff;
+      --panel-accent: #00ff99;
+      --panel-section-bg: rgba(255, 255, 255, 0.05);
+      --panel-border: rgba(0, 255, 153, 0.3);
+      --panel-button-bg: #00ff99;
+      --panel-button-text: #000000;
+    }
+
+    #adminPanel.theme-light {
+      --panel-bg: rgba(255, 255, 255, 0.95);
+      --panel-text: #000000;
+      --panel-accent: #0088ff;
+      --panel-section-bg: rgba(0, 0, 0, 0.05);
+      --panel-border: rgba(0, 136, 255, 0.3);
+      --panel-button-bg: #0088ff;
+      --panel-button-text: #ffffff;
+    }
+
+    #adminPanel.theme-cyberpunk {
+      --panel-bg: rgba(20, 0, 40, 0.98);
+      --panel-text: #ff00ff;
+      --panel-accent: #ff00ff;
+      --panel-section-bg: rgba(255, 0, 255, 0.08);
+      --panel-border: rgba(255, 0, 255, 0.4);
+      --panel-button-bg: #ff00ff;
+      --panel-button-text: #000000;
+    }
+
+    #adminPanel.theme-matrix {
+      --panel-bg: rgba(0, 20, 0, 0.98);
+      --panel-text: #00ff00;
+      --panel-accent: #00ff00;
+      --panel-section-bg: rgba(0, 255, 0, 0.08);
+      --panel-border: rgba(0, 255, 0, 0.4);
+      --panel-button-bg: #00ff00;
+      --panel-button-text: #000000;
+    }
+
+    #adminPanel.theme-ocean {
+      --panel-bg: rgba(0, 20, 40, 0.95);
+      --panel-text: #00ddff;
+      --panel-accent: #00ddff;
+      --panel-section-bg: rgba(0, 221, 255, 0.08);
+      --panel-border: rgba(0, 221, 255, 0.3);
+      --panel-button-bg: #00ddff;
+      --panel-button-text: #001a33;
+    }
+
+    #adminPanel {
+      background: var(--panel-bg) !important;
+      color: var(--panel-text) !important;
+    }
+
+    #adminPanel h1 {
+      color: var(--panel-accent) !important;
+    }
+
+    #adminPanel .adminSection {
+      background: var(--panel-section-bg) !important;
+      border-color: var(--panel-border) !important;
+    }
+
+    #adminPanel .adminSection h2 {
+      color: var(--panel-accent) !important;
+      border-color: var(--panel-border) !important;
+    }
+
+    #adminPanel button {
+      background: var(--panel-button-bg) !important;
+      color: var(--panel-button-text) !important;
+    }
+
+    #adminPanel button:hover {
+      filter: brightness(1.2);
+    }
+
+    #adminPanel input[type="range"],
+    #adminPanel input[type="number"],
+    #adminPanel select {
+      background: rgba(0, 0, 0, 0.2) !important;
+      border-color: var(--panel-border) !important;
+      color: var(--panel-accent) !important;
+    }
+
+    #adminPanel .adminRow span {
+      color: var(--panel-accent) !important;
+    }
+
+    #adminPanel .adItem {
+      background: rgba(0, 0, 0, 0.2) !important;
+      border-color: var(--panel-border) !important;
+    }
+
+    #adminPanel .themeOption.active {
+      background: var(--panel-accent) !important;
+      color: var(--panel-button-text) !important;
+      border-color: var(--panel-accent) !important;
+    }
   </style>
 </head>
 <body>
@@ -745,6 +857,27 @@
           <button id="accessLogBtn">View Log</button>
         </div>
       </div>
+
+      <div class="adminSection">
+        <h2>🎨 Panel Theme</h2>
+        <div class="adminRow">
+          <label>Panel Theme:</label>
+          <select id="panelThemeSelect">
+            <option value="dark">Dark (Default)</option>
+            <option value="light">Light</option>
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="matrix">Matrix</option>
+            <option value="ocean">Ocean</option>
+          </select>
+        </div>
+        <div id="panelThemePreview" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+          <button onclick="switchPanelTheme('dark')" style="min-width: 80px;">Dark</button>
+          <button onclick="switchPanelTheme('light')" style="min-width: 80px;">Light</button>
+          <button onclick="switchPanelTheme('cyberpunk')" style="min-width: 80px;">Cyberpunk</button>
+          <button onclick="switchPanelTheme('matrix')" style="min-width: 80px;">Matrix</button>
+          <button onclick="switchPanelTheme('ocean')" style="min-width: 80px;">Ocean</button>
+        </div>
+      </div>
     </div>
     </div>
     <div id="adminClose">Press ESC to close</div>
@@ -779,6 +912,7 @@
     let apiServerRunning = false;
     let cacheEnabled = true;
     let currentTheme = "dark";
+    let currentPanelTheme = "dark";
     let backups = [];
     let autoBackupEnabled = false;
     let memoryUsage = 0;
@@ -831,6 +965,7 @@
     const compactModeToggle = document.getElementById("compactModeToggle");
     const autoBackupBtn = document.getElementById("autoBackupBtn");
     const emailNotificationsCheckbox = document.getElementById("emailNotifications");
+    const panelThemeSelect = document.getElementById("panelThemeSelect");
     
     let keySequence = "";
     let currentSlideIndex = 0;
@@ -885,20 +1020,34 @@
     });
 
     document.getElementById("playPauseBtn").addEventListener("click", () => {
-      slideshowPaused = !slideshowPaused;
-      addLog("Slideshow " + (slideshowPaused ? "paused" : "resumed"), "control");
+      try {
+        slideshowPaused = !slideshowPaused;
+        addLog("Slideshow " + (slideshowPaused ? "paused" : "resumed"), "control");
+      } catch (err) {
+        addLog("Error toggling play/pause: " + err.message, "error");
+      }
     });
 
     document.getElementById("nextBtn").addEventListener("click", () => {
-      currentSlideIndex = (currentSlideIndex + 1) % images.length;
-      showSlide(currentSlideIndex);
-      scheduleNextChange();
+      try {
+        if (!Array.isArray(images) || !images.length) return;
+        currentSlideIndex = (currentSlideIndex + 1) % images.length;
+        showSlide(currentSlideIndex);
+        scheduleNextChange();
+      } catch (err) {
+        addLog("Error showing next slide: " + err.message, "error");
+      }
     });
 
     document.getElementById("prevBtn").addEventListener("click", () => {
-      currentSlideIndex = (currentSlideIndex - 1 + images.length) % images.length;
-      showSlide(currentSlideIndex);
-      scheduleNextChange();
+      try {
+        if (!Array.isArray(images) || !images.length) return;
+        currentSlideIndex = (currentSlideIndex - 1 + images.length) % images.length;
+        showSlide(currentSlideIndex);
+        scheduleNextChange();
+      } catch (err) {
+        addLog("Error showing previous slide: " + err.message, "error");
+      }
     });
 
     // Scheduling
@@ -910,13 +1059,23 @@
 
     // Alerts
     document.getElementById("testAlertBtn").addEventListener("click", () => {
-      addAlert("Test alert at " + new Date().toLocaleTimeString(), "info");
+      try {
+        addAlert("Test alert at " + new Date().toLocaleTimeString(), "info");
+      } catch (err) {
+        addLog("Error creating test alert: " + err.message, "error");
+      }
     });
-    emailNotificationsCheckbox.addEventListener("change", (e) => {
-      emailNotificationsEnabled = e.target.checked;
-      addLog("Email notifications: " + (emailNotificationsEnabled ? "ON" : "OFF"), "settings");
-      saveSettings();
-    });
+    if (emailNotificationsCheckbox) {
+      emailNotificationsCheckbox.addEventListener("change", (e) => {
+        try {
+          emailNotificationsEnabled = e.target.checked;
+          addLog("Email notifications: " + (emailNotificationsEnabled ? "ON" : "OFF"), "settings");
+          saveSettings();
+        } catch (err) {
+          addLog("Error toggling email: " + err.message, "error");
+        }
+      });
+    }
 
     // API
     document.getElementById("startAPIBtn").addEventListener("click", startAPIServer);
@@ -931,70 +1090,161 @@
 
     // Themes
     initializeThemes();
-    document.getElementById("panelPosition").addEventListener("change", (e) => {
-      adminPanel.classList.remove("pos-left", "pos-right", "pos-top", "pos-center");
-      adminPanel.classList.add("pos-" + e.target.value);
-      saveSettings();
-    });
-    document.getElementById("compactModeToggle").addEventListener("change", (e) => {
-      adminPanel.classList.toggle("compact", e.target.checked);
-      saveSettings();
-    });
+    const panelPosition = document.getElementById("panelPosition");
+    if (panelPosition) {
+      panelPosition.addEventListener("change", (e) => {
+        try {
+          if (!adminPanel) return;
+          adminPanel.classList.remove("pos-left", "pos-right", "pos-top", "pos-center");
+          adminPanel.classList.add("pos-" + e.target.value);
+          saveSettings();
+        } catch (err) {
+          addLog("Error changing panel position: " + err.message, "error");
+        }
+      });
+    }
+    const compactModeToggle = document.getElementById("compactModeToggle");
+    if (compactModeToggle) {
+      compactModeToggle.addEventListener("change", (e) => {
+        try {
+          if (!adminPanel) return;
+          adminPanel.classList.toggle("compact", e.target.checked);
+          saveSettings();
+        } catch (err) {
+          addLog("Error toggling compact mode: " + err.message, "error");
+        }
+      });
+    }
+    if (panelThemeSelect) {
+      panelThemeSelect.addEventListener("change", (e) => {
+        try {
+          switchPanelTheme(e.target.value);
+        } catch (err) {
+          addLog("Error changing panel theme: " + err.message, "error");
+        }
+      });
+    }
 
     // Backup
     document.getElementById("backupNowBtn").addEventListener("click", backupNow);
     document.getElementById("autoBackupBtn").addEventListener("click", () => {
-      autoBackupEnabled = !autoBackupEnabled;
-      document.getElementById("autoBackupBtn").textContent = autoBackupEnabled ? "Disable Auto-Backup" : "Enable Auto-Backup";
-      addLog("Auto-backup: " + (autoBackupEnabled ? "ENABLED" : "DISABLED"), "backup");
-      saveSettings();
+      try {
+        autoBackupEnabled = !autoBackupEnabled;
+        const btn = document.getElementById("autoBackupBtn");
+        if (btn) btn.textContent = autoBackupEnabled ? "Disable Auto-Backup" : "Enable Auto-Backup";
+        addLog("Auto-backup: " + (autoBackupEnabled ? "ENABLED" : "DISABLED"), "backup");
+        saveSettings();
+      } catch (err) {
+        addLog("Error toggling auto-backup: " + err.message, "error");
+      }
     });
     document.getElementById("restoreBackupBtn").addEventListener("click", () => {
-      const idx = parseInt(document.getElementById("versionHistory").value);
-      if (!isNaN(idx)) restoreBackup(idx);
+      try {
+        const versionHistory = document.getElementById("versionHistory");
+        if (!versionHistory) return;
+        const idx = parseInt(versionHistory.value);
+        if (!isNaN(idx)) restoreBackup(idx);
+      } catch (err) {
+        addLog("Error restoring backup: " + err.message, "error");
+      }
     });
-    document.getElementById("exportConfigBtn").addEventListener("click", exportConfig);
+    document.getElementById("exportConfigBtn").addEventListener("click", () => {
+      try {
+        exportConfig();
+      } catch (err) {
+        addLog("Error exporting config: " + err.message, "error");
+      }
+    });
     document.getElementById("rollbackBtn").addEventListener("click", () => {
-      const idx = parseInt(document.getElementById("versionHistory").value);
-      if (!isNaN(idx)) restoreBackup(idx);
+      try {
+        const versionHistory = document.getElementById("versionHistory");
+        if (!versionHistory) return;
+        const idx = parseInt(versionHistory.value);
+        if (!isNaN(idx)) restoreBackup(idx);
+      } catch (err) {
+        addLog("Error rolling back: " + err.message, "error");
+      }
     });
 
     // Keep existing event listeners
     document.getElementById("applyDurationBtn").addEventListener("click", () => {
-      const val = parseInt(durationInput.value);
-      if (!isNaN(val) && val >= 1 && val <= 60) {
-        slideDurationMs = val * 1000;
-        addLog("Duration changed to " + val + "s", "control");
-        scheduleNextChange();
-        saveSettings();
+      try {
+        if (!durationInput) return;
+        const val = parseInt(durationInput.value);
+        if (!isNaN(val) && val >= 1 && val <= 60) {
+          slideDurationMs = val * 1000;
+          addLog("Duration changed to " + val + "s", "control");
+          scheduleNextChange();
+          saveSettings();
+        } else {
+          addLog("Duration must be between 1-60 seconds", "warning");
+        }
+      } catch (err) {
+        addLog("Error changing duration: " + err.message, "error");
       }
     });
 
-    speedPreset.addEventListener("change", (e) => {
-      speedMode = e.target.value;
-      const durations = { slow: 20, normal: 10, fast: 5 };
-      slideDurationMs = durations[speedMode] * 1000;
-      durationInput.value = durations[speedMode];
-      addLog("Speed preset: " + speedMode, "control");
-      scheduleNextChange();
-      saveSettings();
-    });
+    if (speedPreset) {
+      speedPreset.addEventListener("change", (e) => {
+        try {
+          speedMode = e.target.value;
+          const durations = { slow: 20, normal: 10, fast: 5 };
+          slideDurationMs = durations[speedMode] * 1000;
+          if (durationInput) durationInput.value = durations[speedMode];
+          addLog("Speed preset: " + speedMode, "control");
+          scheduleNextChange();
+          saveSettings();
+        } catch (err) {
+          addLog("Error changing speed: " + err.message, "error");
+        }
+      });
+    }
 
-    shuffleToggle.addEventListener("change", (e) => {
-      shuffleMode = e.target.checked;
-      addLog("Shuffle mode: " + (shuffleMode ? "ON" : "OFF"), "control");
-      saveSettings();
-    });
+    if (shuffleToggle) {
+      shuffleToggle.addEventListener("change", (e) => {
+        try {
+          shuffleMode = e.target.checked;
+          addLog("Shuffle mode: " + (shuffleMode ? "ON" : "OFF"), "control");
+          saveSettings();
+        } catch (err) {
+          addLog("Error toggling shuffle: " + err.message, "error");
+        }
+      });
+    }
 
-    document.getElementById("brightnessSlider").addEventListener("input", (e) => {
-      slide.style.filter = `brightness(${e.target.value}%) contrast(${contrastSlider.value}%)`;
-    });
+    const brightnessSlider = document.getElementById("brightnessSlider");
+    const contrastSlider = document.getElementById("contrastSlider");
+    if (brightnessSlider) {
+      brightnessSlider.addEventListener("input", (e) => {
+        try {
+          if (slide && contrastSlider) {
+            slide.style.filter = `brightness(${e.target.value}%) contrast(${contrastSlider.value}%)`;
+          }
+        } catch (err) {
+          console.error("Error setting brightness:", err);
+        }
+      });
+    }
 
-    document.getElementById("contrastSlider").addEventListener("input", (e) => {
-      slide.style.filter = `brightness(${brightnessSlider.value}%) contrast(${e.target.value}%)`;
-    });
+    if (contrastSlider) {
+      contrastSlider.addEventListener("input", (e) => {
+        try {
+          if (slide && brightnessSlider) {
+            slide.style.filter = `brightness(${brightnessSlider.value}%) contrast(${e.target.value}%)`;
+          }
+        } catch (err) {
+          console.error("Error setting contrast:", err);
+        }
+      });
+    }
 
-    document.getElementById("refreshAdsBtn").addEventListener("click", updateAdsList);
+    document.getElementById("refreshAdsBtn").addEventListener("click", () => {
+      try {
+        updateAdsList();
+      } catch (err) {
+        addLog("Error refreshing ads: " + err.message, "error");
+      }
+    });
 
     document.getElementById("screenshotBtn").addEventListener("click", async () => {
       try {
@@ -1010,51 +1260,78 @@
     });
 
     document.getElementById("toggleFullscreenBtn").addEventListener("click", () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(e => {
-          addLog("Fullscreen failed: " + e.message, "error");
-        });
-      } else {
-        document.exitFullscreen();
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(e => {
+            addLog("Fullscreen failed: " + (e ? e.message : "unknown error"), "error");
+          });
+        } else {
+          document.exitFullscreen();
+        }
+        addLog("Fullscreen toggled", "action");
+      } catch (err) {
+        addLog("Error toggling fullscreen: " + err.message, "error");
       }
-      addLog("Fullscreen toggled", "action");
     });
 
     document.getElementById("clearCacheBtn").addEventListener("click", () => {
-      if (confirm("Clear browser cache?")) {
-        localStorage.clear();
-        sessionStorage.clear();
-        addLog("Cache cleared", "maintenance");
+      try {
+        if (confirm("Clear browser cache?")) {
+          localStorage.clear();
+          sessionStorage.clear();
+          addLog("Cache cleared", "maintenance");
+        }
+      } catch (err) {
+        addLog("Error clearing cache: " + err.message, "error");
       }
     });
 
     document.getElementById("restartSlideshowBtn").addEventListener("click", () => {
-      startTime = Date.now();
-      currentSlideIndex = 0;
-      slideshowPaused = false;
-      addLog("Slideshow restarted", "maintenance");
+      try {
+        startTime = Date.now();
+        currentSlideIndex = 0;
+        slideshowPaused = false;
+        scheduleNextChange();
+        addLog("Slideshow restarted", "maintenance");
+      } catch (err) {
+        addLog("Error restarting slideshow: " + err.message, "error");
+      }
     });
 
     document.getElementById("clearLogsBtn").addEventListener("click", () => {
-      systemLog = [];
-      accessLog = [];
-      addLog("Logs cleared", "maintenance");
+      try {
+        systemLog = [];
+        accessLog = [];
+        addLog("Logs cleared", "maintenance");
+      } catch (err) {
+        addLog("Error clearing logs: " + err.message, "error");
+      }
     });
 
     document.getElementById("exportLogsBtn").addEventListener("click", () => {
-      const data = JSON.stringify({ systemLog, accessLog }, null, 2);
-      const link = document.createElement("a");
-      link.href = "data:text/plain;charset=utf-8," + encodeURIComponent(data);
-      link.download = "logs_" + new Date().getTime() + ".json";
-      link.click();
-      addLog("Logs exported", "action");
+      try {
+        const data = JSON.stringify({ systemLog, accessLog }, null, 2);
+        const link = document.createElement("a");
+        link.href = "data:text/plain;charset=utf-8," + encodeURIComponent(data);
+        link.download = "logs_" + new Date().getTime() + ".json";
+        link.click();
+        addLog("Logs exported", "action");
+      } catch (err) {
+        addLog("Error exporting logs: " + err.message, "error");
+      }
     });
 
     document.getElementById("resetSettingsBtn").addEventListener("click", () => {
-      if (confirm("Reset all saved settings?")) {
-        localStorage.removeItem("mlads_settings");
-        addLog("Settings reset", "maintenance");
-        loadSettings(true);
+      try {
+        if (confirm("Reset all saved settings?")) {
+          localStorage.removeItem("mlads_settings");
+          addLog("Settings reset", "maintenance");
+          loadSettings(true);
+        }
+      } catch (err) {
+        addLog("Error resetting settings: " + err.message, "error");
+      }
+    });
       }
     });
 
@@ -1071,26 +1348,46 @@
     });
 
     document.getElementById("rebootBtn").addEventListener("click", () => {
-      if (confirm("Reboot the system? This will restart the slideshow.")) {
-        location.reload();
+      try {
+        if (confirm("Reboot the system? This will restart the slideshow.")) {
+          addLog("System reboot initiated", "maintenance");
+          location.reload();
+        }
+      } catch (err) {
+        addLog("Error rebooting system: " + err.message, "error");
       }
     });
 
     document.getElementById("setAdminCodeBtn").addEventListener("click", () => {
-      const newCode = adminCodeInput.value;
-      if (newCode && newCode.length >= 2) {
+      try {
+        if (!adminCodeInput) return;
+        const newCode = adminCodeInput.value;
+        if (!newCode || newCode.trim() === "") {
+          alert("Admin code cannot be empty");
+          return;
+        }
+        if (newCode.length < 2) {
+          alert("Admin code must be at least 2 characters");
+          return;
+        }
         adminCode = newCode;
-        addLog("Admin code changed to: " + newCode, "security");
-        alert("Admin code updated to: " + newCode);
+        addLog("Admin code changed", "security");
+        alert("Admin code updated successfully");
         saveSettings();
-      } else {
-        alert("Admin code must be at least 2 characters");
+      } catch (err) {
+        addLog("Error changing admin code: " + err.message, "error");
+        alert("Error: " + err.message);
       }
     });
 
     document.getElementById("accessLogBtn").addEventListener("click", () => {
-      const log = accessLog.slice(-10).map(l => new Date(l).toLocaleTimeString()).join("\n");
-      alert("Recent access:\n" + (log || "No access recorded"));
+      try {
+        const log = Array.isArray(accessLog) ? accessLog.slice(-10).map(l => new Date(l).toLocaleTimeString()).join("\n") : "";
+        alert("Recent access:\n" + (log || "No access recorded"));
+      } catch (err) {
+        addLog("Error showing access log: " + err.message, "error");
+      }
+    });
     });
 
     autoOffToggle.addEventListener("change", (e) => {
@@ -1110,6 +1407,7 @@
           blackoutEnd,
           autoBackupEnabled,
           currentTheme,
+          currentPanelTheme,
           adminCode,
           schedules
         };
@@ -1131,6 +1429,7 @@
           blackoutEnd = null;
           autoBackupEnabled = false;
           currentTheme = "dark";
+          currentPanelTheme = "dark";
           adminCode = "123";
         } else {
           if (s.durationSeconds) {
@@ -1171,6 +1470,10 @@
             currentTheme = s.currentTheme;
             switchTheme(currentTheme);
           }
+          if (s.currentPanelTheme) {
+            currentPanelTheme = s.currentPanelTheme;
+            switchPanelTheme(currentPanelTheme);
+          }
           if (s.adminCode) {
             adminCode = s.adminCode;
             adminCodeInput.value = s.adminCode;
@@ -1194,93 +1497,195 @@
 
     // Real-time Monitoring Functions
     function updateMonitoring() {
-      cpuUsage = Math.random() * 80;
-      memoryUsage = Math.random() * 60;
-      diskUsage = Math.random() * 70;
-      
-      if (cpuBar) cpuBar.style.width = cpuUsage + "%";
-      if (diskBar) diskBar.style.width = diskUsage + "%";
-      if (memoryValue) memoryValue.textContent = Math.round(memoryUsage) + "%";
-      if (fpsValue) fpsValue.textContent = Math.round(1000 / 16.67) + " FPS";
-      
-      if (networkStatus) {
-        networkStatus.textContent = networkConnected ? "🟢" : "🔴";
-        networkStatus.style.color = networkConnected ? "#00ff99" : "#ff4444";
+      try {
+        cpuUsage = Math.random() * 80;
+        memoryUsage = Math.random() * 60;
+        diskUsage = Math.random() * 70;
+        
+        if (cpuBar) {
+          cpuBar.style.width = cpuUsage + "%";
+        }
+        if (diskBar) {
+          diskBar.style.width = diskUsage + "%";
+        }
+        if (memoryValue) {
+          memoryValue.textContent = Math.round(memoryUsage) + "%";
+        }
+        if (fpsValue) {
+          fpsValue.textContent = Math.round(1000 / 16.67) + " FPS";
+        }
+        
+        if (networkStatus) {
+          networkStatus.textContent = networkConnected ? "🟢" : "🔴";
+          networkStatus.style.color = networkConnected ? "#00ff99" : "#ff4444";
+        }
+      } catch (err) {
+        console.error("Monitoring update failed:", err);
       }
     }
 
     // Scheduling Functions
     function addSchedule() {
-      const scheduleAdSelect = document.getElementById("scheduleAdSelect");
-      const scheduleTime = document.getElementById("scheduleTime");
-      if (!scheduleAdSelect || !scheduleTime) return;
-      const ad = scheduleAdSelect.value;
-      const time = scheduleTime.value;
-      if (ad && time) {
+      try {
+        const scheduleAdSelect = document.getElementById("scheduleAdSelect");
+        const scheduleTime = document.getElementById("scheduleTime");
+        if (!scheduleAdSelect || !scheduleTime) return;
+        const ad = scheduleAdSelect.value;
+        const time = scheduleTime.value;
+        if (!ad || ad.trim() === "" || !time || time.trim() === "") {
+          addLog("Schedule requires both ad and time", "warning");
+          return;
+        }
+        if (!Array.isArray(schedules)) schedules = [];
         schedules.push({ ad, time, date: new Date().toDateString() });
         updateScheduleList();
         addLog("Schedule added: " + ad + " at " + time, "schedule");
         saveSettings();
+      } catch (err) {
+        addLog("Error adding schedule: " + err.message, "error");
       }
     }
 
     function updateScheduleList() {
-      if (!scheduleList) return;
-      scheduleList.innerHTML = schedules.map((s, i) => 
-        `<div class="scheduleItem">${s.ad} @ ${s.time} <button onclick="schedules.splice(${i},1); updateScheduleList();" style="padding: 2px 6px; font-size: 10px;">Remove</button></div>`
-      ).join("");
+      try {
+        if (!scheduleList) return;
+        if (!Array.isArray(schedules) || schedules.length === 0) {
+          scheduleList.innerHTML = "<p style='color: #888; padding: 10px;'>No schedules</p>";
+          return;
+        }
+        scheduleList.innerHTML = schedules.map((s, i) => {
+          try {
+            return `<div class="scheduleItem">${s.ad} @ ${s.time} <button onclick="if(Array.isArray(schedules)) schedules.splice(${i},1); updateScheduleList();" style="padding: 2px 6px; font-size: 10px;">Remove</button></div>`;
+          } catch (e) {
+            return "";
+          }
+        }).join("");
+      } catch (err) {
+        console.error("Update schedule list failed:", err);
+      }
     }
 
     function setBlackout() {
-      const blackoutStartEl = document.getElementById("blackoutStart");
-      const blackoutEndEl = document.getElementById("blackoutEnd");
-      if (!blackoutStartEl || !blackoutEndEl) return;
-      blackoutStart = blackoutStartEl.value;
-      blackoutEnd = blackoutEndEl.value;
-      addLog("Blackout hours set: " + blackoutStart + " - " + blackoutEnd, "schedule");
-      saveSettings();
+      try {
+        const blackoutStartEl = document.getElementById("blackoutStart");
+        const blackoutEndEl = document.getElementById("blackoutEnd");
+        if (!blackoutStartEl || !blackoutEndEl) return;
+        const start = blackoutStartEl.value;
+        const end = blackoutEndEl.value;
+        if (!start || !end) {
+          addLog("Blackout requires both start and end times", "warning");
+          return;
+        }
+        blackoutStart = start;
+        blackoutEnd = end;
+        addLog("Blackout hours set: " + blackoutStart + " - " + blackoutEnd, "schedule");
+        saveSettings();
+      } catch (err) {
+        addLog("Error setting blackout: " + err.message, "error");
+      }
     }
 
     // Content Management Functions
     function initializeUploadArea() {
-      const uploadArea = document.getElementById("uploadArea");
-      const fileInput = document.getElementById("fileInput");
-      if (!uploadArea || !fileInput) return;
-      uploadArea.addEventListener("click", () => fileInput.click());
-      uploadArea.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        uploadArea.style.background = "rgba(0, 255, 153, 0.2)";
-      });
-      uploadArea.addEventListener("dragleave", () => {
-        uploadArea.style.background = "rgba(0, 255, 153, 0.05)";
-      });
-      uploadArea.addEventListener("drop", (e) => {
-        e.preventDefault();
-        uploadArea.style.background = "rgba(0, 255, 153, 0.05)";
-        handleFileUpload(e.dataTransfer.files);
-      });
-      fileInput.addEventListener("change", (e) => handleFileUpload(e.target.files));
+      try {
+        const uploadArea = document.getElementById("uploadArea");
+        const fileInput = document.getElementById("fileInput");
+        if (!uploadArea || !fileInput) return;
+        uploadArea.addEventListener("click", () => fileInput.click());
+        uploadArea.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          uploadArea.style.background = "rgba(0, 255, 153, 0.2)";
+        });
+        uploadArea.addEventListener("dragleave", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          uploadArea.style.background = "rgba(0, 255, 153, 0.05)";
+        });
+        uploadArea.addEventListener("drop", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          uploadArea.style.background = "rgba(0, 255, 153, 0.05)";
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileUpload(e.dataTransfer.files);
+          }
+        });
+        fileInput.addEventListener("change", (e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleFileUpload(e.target.files);
+          }
+        });
+      } catch (err) {
+        console.error("Upload area init failed:", err);
+      }
     }
 
     function handleFileUpload(files) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          images.push(e.target.result);
-          addLog("Image uploaded: " + file.name, "upload");
-          updateAdContentList();
-        };
-        reader.readAsDataURL(file);
-      });
+      try {
+        if (!files || files.length === 0) return;
+        Array.from(files).forEach(file => {
+          try {
+            if (!file.type.startsWith('image/')) {
+              addLog("Skipped non-image: " + file.name, "warning");
+              return;
+            }
+            const reader = new FileReader();
+            reader.onerror = () => {
+              addLog("Failed to read: " + file.name, "error");
+            };
+            reader.onload = (e) => {
+              try {
+                if (e.target && e.target.result) {
+                  images.push(e.target.result);
+                  addLog("Image uploaded: " + file.name, "upload");
+                  updateAdContentList();
+                  updateAdsList();
+                }
+              } catch (err) {
+                addLog("Error processing upload: " + err.message, "error");
+              }
+            };
+            reader.readAsDataURL(file);
+          } catch (err) {
+            addLog("Error handling file: " + err.message, "error");
+          }
+        });
+      } catch (err) {
+        addLog("File upload failed: " + err.message, "error");
+      }
     }
 
     function updateAdContentList() {
-      adContentList.innerHTML = images.map((img, i) => 
-        `<div class="adCard">
-          ${img.substring(0, 50)}...
-          <button onclick="images.splice(${i},1); updateAdContentList();" style="padding: 4px 8px; font-size: 10px;">Remove</button>
-        </div>`
-      ).join("");
+      try {
+        const list = document.getElementById("adContentList");
+        if (!list) return;
+        list.innerHTML = "";
+        if (!Array.isArray(images) || images.length === 0) {
+          list.innerHTML = "<p style='color: #888; padding: 10px;'>No images uploaded</p>";
+          return;
+        }
+        images.forEach((img, i) => {
+          try {
+            const div = document.createElement("div");
+            div.className = "adCard";
+            const removeBtn = document.createElement("button");
+            removeBtn.onclick = () => {
+              images.splice(i, 1);
+              updateAdContentList();
+            };
+            removeBtn.style.padding = "4px 8px";
+            removeBtn.style.fontSize = "10px";
+            removeBtn.textContent = "Remove";
+            div.textContent = img.substring(0, 50) + "...";
+            div.appendChild(removeBtn);
+            list.appendChild(div);
+          } catch (err) {
+            console.error("Error adding image to list:", err);
+          }
+        });
+      } catch (err) {
+        console.error("Update ad content list failed:", err);
+      }
     }
 
     // Alerts Functions
@@ -1302,152 +1707,269 @@
 
     // API Functions
     function startAPIServer() {
-      apiServerRunning = true;
-      if (apiStatus) {
-        apiStatus.textContent = "🟢 Running";
-        apiStatus.style.color = "#00ff99";
+      try {
+        apiServerRunning = true;
+        if (apiStatus) {
+          apiStatus.textContent = "🟢 Running";
+          apiStatus.style.color = "#00ff99";
+        }
+        addLog("API server started on localhost:8080", "api");
+      } catch (err) {
+        addLog("Error starting API: " + err.message, "error");
       }
-      addLog("API server started on localhost:8080", "api");
     }
 
     function stopAPIServer() {
-      apiServerRunning = false;
-      if (apiStatus) {
-        apiStatus.textContent = "🔴 Offline";
-        apiStatus.style.color = "#ff4444";
+      try {
+        apiServerRunning = false;
+        if (apiStatus) {
+          apiStatus.textContent = "🔴 Offline";
+          apiStatus.style.color = "#ff4444";
+        }
+        addLog("API server stopped", "api");
+      } catch (err) {
+        addLog("Error stopping API: " + err.message, "error");
       }
-      addLog("API server stopped", "api");
     }
 
     function sendCommand() {
-      const commandInput = document.getElementById("commandInput");
-      if (!commandInput) return;
-      const cmd = commandInput.value;
-      if (cmd) {
+      try {
+        const commandInput = document.getElementById("commandInput");
+        if (!commandInput) return;
+        const cmd = commandInput.value;
+        if (!cmd || cmd.trim() === "") {
+          addLog("Cannot queue empty command", "warning");
+          return;
+        }
         commandQueue.push(cmd);
         if (queueSize) queueSize.textContent = commandQueue.length;
         addLog("Command queued: " + cmd, "command");
         commandInput.value = "";
         processCommandQueue();
+      } catch (err) {
+        addLog("Error sending command: " + err.message, "error");
       }
     }
 
     function processCommandQueue() {
-      if (commandQueue.length > 0) {
-        const cmd = commandQueue.shift();
-        addLog("Command executed: " + cmd, "command");
+      try {
+        if (!Array.isArray(commandQueue)) commandQueue = [];
+        if (commandQueue.length > 0) {
+          const cmd = commandQueue.shift();
+          if (cmd) {
+            addLog("Command executed: " + cmd, "command");
+          }
+        }
         if (queueSize) queueSize.textContent = commandQueue.length;
+      } catch (err) {
+        addLog("Error processing queue: " + err.message, "error");
       }
     }
 
     // Performance Functions
     function enableCache() {
-      cacheEnabled = true;
-      addLog("Image cache enabled", "performance");
+      try {
+        cacheEnabled = true;
+        addLog("Image cache enabled", "performance");
+      } catch (err) {
+        addLog("Error enabling cache: " + err.message, "error");
+      }
     }
 
     function preloadNext() {
-      const nextIndex = (currentSlideIndex + 1) % images.length;
-      const img = new Image();
-      img.src = images[nextIndex];
-      addLog("Next slide preloaded", "performance");
+      try {
+        if (!Array.isArray(images) || !images.length) return;
+        const nextIndex = (currentSlideIndex + 1) % images.length;
+        const img = new Image();
+        img.onerror = () => {
+          addLog("Failed to preload next slide", "warning");
+        };
+        img.src = images[nextIndex];
+        addLog("Next slide preloaded", "performance");
+      } catch (err) {
+        addLog("Preload error: " + err.message, "error");
+      }
     }
 
     function memoryCleanup() {
-      localStorage.clear();
-      addLog("Memory cleaned up", "performance");
+      try {
+        // Clear only old entries, preserve settings
+        const settings = localStorage.getItem("mlads_settings");
+        localStorage.clear();
+        if (settings) localStorage.setItem("mlads_settings", settings);
+        addLog("Memory cleaned up (settings preserved)", "performance");
+      } catch (err) {
+        addLog("Cleanup error: " + err.message, "error");
+      }
     }
 
     function perfProfiler() {
-      const profile = {
-        fps: Math.round(1000 / 16.67),
-        memory: Math.round(memoryUsage),
-        cpu: Math.round(cpuUsage),
-        uptime: Math.floor((Date.now() - startTime) / 1000)
-      };
-      addLog("Profiler: " + JSON.stringify(profile), "performance");
+      try {
+        const profile = {
+          fps: Math.round(1000 / 16.67),
+          memory: Math.round(memoryUsage || 0),
+          cpu: Math.round(cpuUsage || 0),
+          uptime: Math.floor((Date.now() - startTime) / 1000)
+        };
+        addLog("Profiler: " + JSON.stringify(profile), "performance");
+      } catch (err) {
+        addLog("Profiler error: " + err.message, "error");
+      }
     }
 
     // Theme Functions
     function initializeThemes() {
-      const themes = ["dark", "light", "cyberpunk", "matrix"];
-      const themeSelector = document.getElementById("themeSelector");
-      if (themeSelector) {
-        themeSelector.innerHTML = themes.map(t => 
-          `<div class="themeOption ${t === currentTheme ? 'active' : ''}" onclick="switchTheme('${t}')">${t}</div>`
-        ).join("");
+      try {
+        const themes = ["dark", "light", "cyberpunk", "matrix"];
+        const themeSelector = document.getElementById("themeSelector");
+        if (themeSelector) {
+          themeSelector.innerHTML = themes.map(t => {
+            try {
+              return `<div class="themeOption ${t === currentTheme ? 'active' : ''}" onclick="switchTheme('${t}')">${t}</div>`;
+            } catch (e) {
+              return "";
+            }
+          }).join("");
+        }
+      } catch (err) {
+        console.error("Initialize themes failed:", err);
       }
     }
 
     function switchTheme(theme) {
-      currentTheme = theme;
-      const styles = {
-        dark: { bg: "#000", color: "#00ff99" },
-        light: { bg: "#fff", color: "#000" },
-        cyberpunk: { bg: "#0a0e27", color: "#ff0080" },
-        matrix: { bg: "#001a00", color: "#00ff00" }
-      };
-      document.documentElement.style.setProperty('--main-bg', styles[theme].bg);
-      document.documentElement.style.setProperty('--main-color', styles[theme].color);
-      addLog("Theme changed to: " + theme, "ui");
-      initializeThemes();
-      saveSettings();
+      try {
+        if (!theme || typeof theme !== "string") return;
+        currentTheme = theme;
+        const styles = {
+          dark: { bg: "#000", color: "#00ff99" },
+          light: { bg: "#fff", color: "#000" },
+          cyberpunk: { bg: "#0a0e27", color: "#ff0080" },
+          matrix: { bg: "#001a00", color: "#00ff00" }
+        };
+        const style = styles[theme] || styles.dark;
+        document.documentElement.style.setProperty('--main-bg', style.bg);
+        document.documentElement.style.setProperty('--main-color', style.color);
+        addLog("Theme changed to: " + theme, "ui");
+        initializeThemes();
+        saveSettings();
+      } catch (err) {
+        addLog("Error changing theme: " + err.message, "error");
+      }
+    }
+
+    function switchPanelTheme(theme) {
+      try {
+        if (!theme || typeof theme !== "string") return;
+        if (!adminPanel) return;
+        currentPanelTheme = theme;
+        adminPanel.classList.remove("theme-dark", "theme-light", "theme-cyberpunk", "theme-matrix", "theme-ocean");
+        adminPanel.classList.add("theme-" + theme);
+        if (panelThemeSelect) {
+          panelThemeSelect.value = theme;
+        }
+        addLog("Admin panel theme changed to: " + theme, "ui");
+        saveSettings();
+      } catch (err) {
+        addLog("Error changing panel theme: " + err.message, "error");
+      }
     }
 
     // Backup Functions
     function backupNow() {
-      const backup = {
-        timestamp: new Date().toISOString(),
-        images: [...images],
-        schedules: [...schedules],
-        settings: { adminCode, speedMode, shuffleMode, currentTheme }
-      };
-      backups.push(backup);
-      if (versionHistory) {
-        versionHistory.innerHTML = backups.map((b, i) => 
-          `<option value="${i}">${new Date(b.timestamp).toLocaleString()}</option>`
-        ).join("");
+      try {
+        const backup = {
+          timestamp: new Date().toISOString(),
+          images: Array.isArray(images) ? [...images] : [],
+          schedules: Array.isArray(schedules) ? [...schedules] : [],
+          settings: { adminCode, speedMode, shuffleMode, currentTheme, currentPanelTheme }
+        };
+        if (!Array.isArray(backups)) backups = [];
+        backups.push(backup);
+        if (versionHistory) {
+          versionHistory.innerHTML = backups.map((b, i) => 
+            `<option value="${i}">${new Date(b.timestamp).toLocaleString()}</option>`
+          ).join("");
+        }
+        addLog("Backup created", "backup");
+      } catch (err) {
+        addLog("Backup failed: " + err.message, "error");
       }
-      addLog("Backup created", "backup");
     }
 
     function restoreBackup(index) {
-      const backup = backups[index];
-      if (backup) {
+      try {
+        if (!Array.isArray(backups) || !backups[index]) {
+          addLog("Invalid backup index", "error");
+          return;
+        }
+        const backup = backups[index];
+        if (!Array.isArray(images)) images = [];
         images.length = 0;
-        images.push(...backup.images);
-        schedules = [...backup.schedules];
-        adminCode = backup.settings.adminCode;
+        if (backup.images) images.push(...backup.images);
+        if (Array.isArray(backup.schedules)) {
+          schedules = [...backup.schedules];
+        }
+        if (backup.settings && backup.settings.adminCode) {
+          adminCode = backup.settings.adminCode;
+        }
         addLog("Backup restored from " + backup.timestamp, "backup");
+        updateAdContentList();
+        updateAdsList();
+      } catch (err) {
+        addLog("Restore failed: " + err.message, "error");
       }
     }
 
     function exportConfig() {
-      const config = {
-        images, schedules, adminCode, speedMode, shuffleMode, 
-        currentTheme, lastRebootTime: lastRebootTime.toISOString()
-      };
-      const link = document.createElement("a");
-      link.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
-      link.download = "config_" + Date.now() + ".json";
-      link.click();
-      addLog("Config exported", "backup");
+      try {
+        const config = {
+          images: Array.isArray(images) ? [...images] : [],
+          schedules: Array.isArray(schedules) ? [...schedules] : [],
+          adminCode: adminCode || "",
+          speedMode: speedMode || "normal",
+          shuffleMode: shuffleMode || false,
+          currentTheme: currentTheme || "dark",
+          currentPanelTheme: currentPanelTheme || "dark",
+          lastRebootTime: lastRebootTime ? lastRebootTime.toISOString() : new Date().toISOString()
+        };
+        const link = document.createElement("a");
+        link.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+        link.download = "config_" + Date.now() + ".json";
+        link.click();
+        addLog("Config exported", "backup");
+      } catch (err) {
+        addLog("Export failed: " + err.message, "error");
+      }
     }
 
     function updateAdsList() {
-      adsList.innerHTML = "";
-      images.forEach((img, index) => {
-        const div = document.createElement("div");
-        div.className = "adItem" + (index === currentSlideIndex ? " current" : "");
-        const views = slideViews[index] || 0;
-        div.textContent = `${index + 1}. ${img} (${views} views)`;
-        div.addEventListener("click", () => {
-          currentSlideIndex = index;
-          showSlide(currentSlideIndex);
-          scheduleNextChange();
+      try {
+        const list = document.getElementById("adsList");
+        if (!list) return;
+        list.innerHTML = "";
+        if (!Array.isArray(images) || images.length === 0) {
+          list.innerHTML = "<p style='color: #888; padding: 10px;'>No ads loaded</p>";
+          return;
+        }
+        images.forEach((img, index) => {
+          try {
+            const div = document.createElement("div");
+            div.className = "adItem" + (index === currentSlideIndex ? " current" : "");
+            const views = slideViews[index] || 0;
+            div.textContent = (index + 1) + ". " + img.substring(0, 30) + "... (" + views + " views)";
+            div.onclick = () => {
+              currentSlideIndex = index;
+              showSlide(currentSlideIndex);
+              scheduleNextChange();
+            };
+            list.appendChild(div);
+          } catch (err) {
+            console.error("Error creating ad item:", err);
+          }
         });
-        adsList.appendChild(div);
-      });
+      } catch (err) {
+        console.error("Update ads list failed:", err);
+      }
     }
 
     function isInBlackout(nowMs) {
@@ -1589,51 +2111,68 @@
     }
 
     function preloadImages() {
-      images.forEach((src, i) => {
-        const img = new Image();
-        img.src = src;
-        preloadImgs[i] = img;
-      });
+      try {
+        if (!Array.isArray(images)) return;
+        images.forEach((src, i) => {
+          try {
+            const img = new Image();
+            img.onerror = () => {
+              addLog("Failed to preload image " + i, "warning");
+            };
+            img.src = src;
+            preloadImgs[i] = img;
+          } catch (err) {
+            console.error("Error preloading image:", err);
+          }
+        });
+      } catch (err) {
+        console.error("Preload images failed:", err);
+      }
     }
 
     function showSlide(index) {
-      if (!images[index]) return;
-      // update DOM only if changed
-      if (slide.src !== images[index]) slide.src = images[index];
-      slideCounter.textContent = `${index + 1}/${images.length}`;
-      if (!slideViews[index]) slideViews[index] = 0;
-      slideViews[index]++;
-      updateAdsList();
+      try {
+        if (!Array.isArray(images) || !images[index] || !slide) return;
+        // update DOM only if changed
+        if (slide.src !== images[index]) slide.src = images[index];
+        if (slideCounter) slideCounter.textContent = (index + 1) + "/" + images.length;
+        if (!slideViews[index]) slideViews[index] = 0;
+        slideViews[index]++;
+        updateAdsList();
+      } catch (err) {
+        console.error("Show slide failed:", err);
+      }
     }
 
     function scheduleNextChange() {
-      if (slideTimer) {
-        clearTimeout(slideTimer);
-        slideTimer = null;
-      }
-      if (slideshowPaused) return;
-      if (!images.length) return;
-      // Blackout handling
-      const nowCheck = getAccurateTime();
-      if (isInBlackout(nowCheck)) {
-        if (!blackoutActive) { blackoutActive = true; addLog("Blackout active", "schedule"); }
-        slide.src = "";
-        slideCounter.textContent = "Blackout";
-        slideTimer = setTimeout(scheduleNextChange, 1000);
-        return;
-      } else if (blackoutActive) {
-        blackoutActive = false;
-        addLog("Blackout ended", "schedule");
-      }
+      try {
+        if (slideTimer) {
+          clearTimeout(slideTimer);
+          slideTimer = null;
+        }
+        if (slideshowPaused) return;
+        if (!Array.isArray(images) || !images.length) return;
+        // Blackout handling
+        const nowCheck = getAccurateTime();
+        if (isInBlackout(nowCheck)) {
+          if (!blackoutActive) { blackoutActive = true; addLog("Blackout active", "schedule"); }
+          if (slide) slide.src = "";
+          if (slideCounter) slideCounter.textContent = "Blackout";
+          slideTimer = setTimeout(scheduleNextChange, 1000);
+          return;
+        } else if (blackoutActive) {
+          blackoutActive = false;
+          addLog("Blackout ended", "schedule");
+        }
 
-      const now = getAccurateTime();
-      const totalCycleMs = slideDurationMs * images.length;
-      const position = ((now % totalCycleMs) + totalCycleMs) % totalCycleMs; // positive modulo
-      const timeToNext = slideDurationMs - (position % slideDurationMs);
+        const now = getAccurateTime();
+        const totalCycleMs = slideDurationMs * images.length;
+        const position = ((now % totalCycleMs) + totalCycleMs) % totalCycleMs; // positive modulo
+        const timeToNext = slideDurationMs - (position % slideDurationMs);
 
-      // Aggressive adjustment to compensate for setTimeout jitter and browser delays
-      // This ensures all devices switch at precisely the same server-time instant
-      const adjust = 12; // ms - increased for better cross-device sync
+        // Aggressive adjustment to compensate for setTimeout jitter and browser delays
+        // This ensures all devices switch at precisely the same server-time instant
+        const adjust = 12; // ms - increased for better cross-device sync
       
       slideTimer = setTimeout(() => {
         // Verify we're at the right time by checking server time again
