@@ -446,9 +446,155 @@
   <div id="syncStatus" class="warn"><span id="syncIndicator" class="sync-light warn"></span><span id="syncStatusText">Syncing time</span></div>
 
   <div id="adminPanel" class="pos-center">
-    <h1>SUPREME COMMANDER PANEL</h1>
+    <h1>SUPREME COMMANDER PANEL v4.0.0</h1>
     <div id="adminScroll">
     <div id="adminContent">
+      <div class="adminSection">
+        <h2>⚡ Real-time Monitoring</h2>
+        <div class="statsGrid">
+          <div class="statItem">
+            <div class="label">Network</div>
+            <div class="value" id="networkStatus">●</div>
+          </div>
+          <div class="statItem">
+            <div class="label">Latency</div>
+            <div class="value" id="latencyValue">0ms</div>
+          </div>
+          <div class="statItem">
+            <div class="label">Memory</div>
+            <div class="value" id="memoryValue">N/A</div>
+          </div>
+          <div class="statItem">
+            <div class="label">FPS</div>
+            <div class="value" id="fpsValue">0</div>
+          </div>
+        </div>
+        <div class="adminRow">
+          <label>CPU Usage:</label>
+          <div class="progressBar"><div class="progressFill" id="cpuBar" style="width: 0%"></div></div>
+        </div>
+        <div class="adminRow">
+          <label>Disk Space:</label>
+          <div class="progressBar"><div class="progressFill" id="diskBar" style="width: 0%"></div></div>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>📅 Advanced Scheduling</h2>
+        <div class="adminRow">
+          <label>Schedule Ad:</label>
+          <select id="scheduleAdSelect"></select>
+          <input type="time" id="scheduleTime">
+          <button id="scheduleBtn">Add</button>
+        </div>
+        <div class="adminRow">
+          <label>Blackout Hours:</label>
+          <input type="time" id="blackoutStart" placeholder="Start">
+          <input type="time" id="blackoutEnd" placeholder="End">
+          <button id="setBlackoutBtn">Set</button>
+        </div>
+        <div id="scheduleList" style="max-height: 100px; overflow-y: auto;"></div>
+      </div>
+
+      <div class="adminSection">
+        <h2>📁 Content Management</h2>
+        <div class="adUploadArea" id="uploadArea">Drop images here or click to upload</div>
+        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+        <div id="adContentList" style="max-height: 120px; overflow-y: auto;"></div>
+      </div>
+
+      <div class="adminSection">
+        <h2>🚨 Alerts & Notifications</h2>
+        <div id="alertsList" style="max-height: 100px; overflow-y: auto;"></div>
+        <div class="adminRow">
+          <button id="testAlertBtn">Test Alert</button>
+          <label style="margin-left: 10px;">
+            <input type="checkbox" id="emailNotifications" style="width: auto;">
+            Email Notifications
+          </label>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>🔌 Remote Control & API</h2>
+        <div class="adminRow">
+          <label>API Status:</label>
+          <span id="apiStatus" style="color: #ff4444;">Offline</span>
+        </div>
+        <div class="adminRow">
+          <label>Command Queue:</label>
+          <span id="queueSize">0</span>
+        </div>
+        <div class="adminRow">
+          <input type="text" id="commandInput" placeholder="Enter command..." style="width: 200px;">
+          <button id="sendCommandBtn">Send</button>
+        </div>
+        <div class="adminRow">
+          <button id="startAPIBtn">Start API Server</button>
+          <button id="stopAPIBtn">Stop API Server</button>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>⚙️ Performance Optimization</h2>
+        <div class="adminRow">
+          <button id="enableCacheBtn">Enable Cache</button>
+          <button id="preloadNextBtn">Preload Next</button>
+        </div>
+        <div class="adminRow">
+          <button id="memoryCleanupBtn">Memory Cleanup</button>
+          <button id="perfProfilerBtn">Performance Profile</button>
+        </div>
+        <div class="adminRow">
+          <label>Optimization Level:</label>
+          <select id="optimizationLevel">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>🎨 Advanced UI & Themes</h2>
+        <div class="adminRow">
+          <div id="themeSelector" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+        </div>
+        <div class="adminRow">
+          <label>Panel Position:</label>
+          <select id="panelPosition">
+            <option value="center" selected>Center</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+            <option value="top">Top</option>
+          </select>
+        </div>
+        <div class="adminRow toggleSwitch">
+          <label>Compact Mode:</label>
+          <label class="switch">
+            <input type="checkbox" id="compactModeToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>💾 Backup & Recovery</h2>
+        <div class="adminRow">
+          <button id="autoBackupBtn">Enable Auto-Backup</button>
+          <button id="backupNowBtn">Backup Now</button>
+        </div>
+        <div class="adminRow">
+          <button id="restoreBackupBtn">Restore from Backup</button>
+          <button id="exportConfigBtn">Export Config</button>
+        </div>
+        <div class="adminRow">
+          <label>Version History:</label>
+          <select id="versionHistory"></select>
+          <button id="rollbackBtn">Rollback</button>
+        </div>
+      </div>
+
       <div class="adminSection">
         <h2>Time & Sync</h2>
         <div class="adminRow">
@@ -463,12 +609,140 @@
           <label>Latency:</label>
           <span id="latencyInfo"></span>
         </div>
+        <div class="adminRow">
+          <button id="resyncTimeBtn">Resync Time Now</button>
+        </div>
       </div>
 
       <div class="adminSection">
-        <h2>Resync Time</h2>
+        <h2>Slideshow Controls</h2>
         <div class="adminRow">
-          <button id="resyncTimeBtn">Resync Time Now</button>
+          <button id="playPauseBtn">Play/Pause</button>
+          <button id="prevBtn">← Prev</button>
+          <button id="nextBtn">Next →</button>
+        </div>
+        <div class="adminRow">
+          <label>Slide:</label>
+          <span id="slideCounter"></span>
+        </div>
+        <div class="adminRow">
+          <label>Duration (s):</label>
+          <input type="number" id="durationInput" min="1" max="60" value="10">
+          <button id="applyDurationBtn">Apply</button>
+        </div>
+        <div class="adminRow">
+          <label>Speed:</label>
+          <select id="speedPreset">
+            <option value="slow">Slow (20s)</option>
+            <option value="normal" selected>Normal (10s)</option>
+            <option value="fast">Fast (5s)</option>
+          </select>
+        </div>
+        <div class="adminRow toggleSwitch">
+          <label>Shuffle:</label>
+          <label class="switch">
+            <input type="checkbox" id="shuffleToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>System Info</h2>
+        <div class="adminRow">
+          <label>Uptime:</label>
+          <span id="uptimeInfo"></span>
+        </div>
+        <div class="adminRow">
+          <label>Browser:</label>
+          <span id="browserInfo"></span>
+        </div>
+        <div class="adminRow">
+          <label>IP Address:</label>
+          <span id="ipInfo">Fetching...</span>
+        </div>
+        <div class="adminRow">
+          <label>Last Reboot:</label>
+          <span id="lastRebootInfo"></span>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>Monitoring & Analytics</h2>
+        <div class="adminRow">
+          <label>Total Views:</label>
+          <span id="totalViews">0</span>
+        </div>
+        <div id="adViewStats" style="font-size: 12px; color: #aaa;"></div>
+        <div class="adminRow">
+          <label>Refresh Rate:</label>
+          <span id="refreshRate">60 FPS</span>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>Ad Management</h2>
+        <div id="adsList"></div>
+        <button id="refreshAdsBtn">Refresh Ad List</button>
+      </div>
+
+      <div class="adminSection">
+        <h2>Display Controls</h2>
+        <div class="adminRow">
+          <label>Brightness:</label>
+          <input type="range" id="brightnessSlider" min="0" max="200" value="100">
+        </div>
+        <div class="adminRow">
+          <label>Contrast:</label>
+          <input type="range" id="contrastSlider" min="0" max="200" value="100">
+        </div>
+        <div class="adminRow">
+          <button id="screenshotBtn">Screenshot</button>
+          <button id="toggleFullscreenBtn">Fullscreen</button>
+        </div>
+        <div class="adminRow toggleSwitch">
+          <label>Auto-Off:</label>
+          <label class="switch">
+            <input type="checkbox" id="autoOffToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>Data & Logging</h2>
+        <div class="logViewer" id="logViewer"></div>
+        <div class="adminRow">
+          <button id="clearLogsBtn">Clear Logs</button>
+          <button id="exportLogsBtn">Export Logs</button>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>Maintenance</h2>
+        <div class="adminRow">
+          <button id="clearCacheBtn">Clear Cache</button>
+          <button id="restartSlideshowBtn">Restart Slideshow</button>
+        </div>
+        <div class="adminRow">
+          <button id="diagnosticsBtn">System Diagnostics</button>
+          <button id="rebootBtn">Reboot System</button>
+        </div>
+        <div class="adminRow">
+          <button id="resetSettingsBtn">Reset Settings</button>
+        </div>
+      </div>
+
+      <div class="adminSection">
+        <h2>Security & Access</h2>
+        <div class="adminRow">
+          <label>Admin Code:</label>
+          <input type="text" id="adminCodeInput" placeholder="e.g., 123" style="width: 80px;">
+          <button id="setAdminCodeBtn">Set</button>
+        </div>
+        <div class="adminRow">
+          <label>Access Log:</label>
+          <button id="accessLogBtn">View Log</button>
         </div>
       </div>
     </div>
@@ -549,6 +823,9 @@
     const apiStatus = document.getElementById("apiStatus");
     const queueSize = document.getElementById("queueSize");
     const adContentList = document.getElementById("adContentList");
+    const themeSelector = document.getElementById("themeSelector");
+    const uploadArea = document.getElementById("uploadArea");
+    const fileInput = document.getElementById("fileInput");
     const versionHistory = document.getElementById("versionHistory");
     const panelPosition = document.getElementById("panelPosition");
     const compactModeToggle = document.getElementById("compactModeToggle");
@@ -622,6 +899,64 @@
       currentSlideIndex = (currentSlideIndex - 1 + images.length) % images.length;
       showSlide(currentSlideIndex);
       scheduleNextChange();
+    });
+
+    // Scheduling
+    document.getElementById("scheduleBtn").addEventListener("click", addSchedule);
+    document.getElementById("setBlackoutBtn").addEventListener("click", setBlackout);
+
+    // Content Management
+    initializeUploadArea();
+
+    // Alerts
+    document.getElementById("testAlertBtn").addEventListener("click", () => {
+      addAlert("Test alert at " + new Date().toLocaleTimeString(), "info");
+    });
+    emailNotificationsCheckbox.addEventListener("change", (e) => {
+      emailNotificationsEnabled = e.target.checked;
+      addLog("Email notifications: " + (emailNotificationsEnabled ? "ON" : "OFF"), "settings");
+      saveSettings();
+    });
+
+    // API
+    document.getElementById("startAPIBtn").addEventListener("click", startAPIServer);
+    document.getElementById("stopAPIBtn").addEventListener("click", stopAPIServer);
+    document.getElementById("sendCommandBtn").addEventListener("click", sendCommand);
+
+    // Performance
+    document.getElementById("enableCacheBtn").addEventListener("click", enableCache);
+    document.getElementById("preloadNextBtn").addEventListener("click", preloadNext);
+    document.getElementById("memoryCleanupBtn").addEventListener("click", memoryCleanup);
+    document.getElementById("perfProfilerBtn").addEventListener("click", perfProfiler);
+
+    // Themes
+    initializeThemes();
+    document.getElementById("panelPosition").addEventListener("change", (e) => {
+      adminPanel.classList.remove("pos-left", "pos-right", "pos-top", "pos-center");
+      adminPanel.classList.add("pos-" + e.target.value);
+      saveSettings();
+    });
+    document.getElementById("compactModeToggle").addEventListener("change", (e) => {
+      adminPanel.classList.toggle("compact", e.target.checked);
+      saveSettings();
+    });
+
+    // Backup
+    document.getElementById("backupNowBtn").addEventListener("click", backupNow);
+    document.getElementById("autoBackupBtn").addEventListener("click", () => {
+      autoBackupEnabled = !autoBackupEnabled;
+      document.getElementById("autoBackupBtn").textContent = autoBackupEnabled ? "Disable Auto-Backup" : "Enable Auto-Backup";
+      addLog("Auto-backup: " + (autoBackupEnabled ? "ENABLED" : "DISABLED"), "backup");
+      saveSettings();
+    });
+    document.getElementById("restoreBackupBtn").addEventListener("click", () => {
+      const idx = parseInt(document.getElementById("versionHistory").value);
+      if (!isNaN(idx)) restoreBackup(idx);
+    });
+    document.getElementById("exportConfigBtn").addEventListener("click", exportConfig);
+    document.getElementById("rollbackBtn").addEventListener("click", () => {
+      const idx = parseInt(document.getElementById("versionHistory").value);
+      if (!isNaN(idx)) restoreBackup(idx);
     });
 
     // Keep existing event listeners
