@@ -3,22 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <title>Company Ads</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    :root {
-      --main-bg: #000000;
-      --main-color: #ffffff;
-      --accent-color: #00ff99;
-    }
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: var(--main-bg);
-      color: var(--main-color);
+      background: #000000;
       overflow: hidden;
-      user-select: none;
     }
     #slideshow {
       position: fixed;
@@ -29,14 +21,46 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--main-bg);
+      background: #000000;
     }
     #slideshow img {
       max-width: 100%;
       max-height: 100%;
       object-fit: contain;
     }
-    #syncStatus {
+  </style>
+</head>
+<body>
+  <div id="slideshow">
+    <img id="slide" src="ads/ad1.png" alt="Ad" />
+  </div>
+
+  <script>
+    const images = [
+      "ads/ad1.png",
+      "ads/ad2.png",
+      "ads/ad3.png"
+    ];
+    
+    let currentIndex = 0;
+    const slideElement = document.getElementById("slide");
+    const slideDuration = 10000; // 10 seconds
+
+    function showNextSlide() {
+      currentIndex = (currentIndex + 1) % images.length;
+      slideElement.src = images[currentIndex];
+      console.log("Showing slide", currentIndex + 1, "of", images.length, ":", images[currentIndex]);
+    }
+
+    // Start the slideshow
+    console.log("Slideshow starting with", images.length, "images");
+    console.log("Each slide displays for", slideDuration / 1000, "seconds");
+    
+    // Change slides every 10 seconds
+    setInterval(showNextSlide, slideDuration);
+  </script>
+</body>
+</html>
       position: fixed;
       top: 10px;
       left: 10px;
@@ -552,7 +576,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <div id="slideshow">
-    <img id="slide" src="" alt="Ad" />
+    <img id="slide" src="ads/ad1.png" alt="Ad" />
   </div>
 
   <div id="syncStatus" class="warn"><span id="syncIndicator" class="sync-light warn"></span><span id="syncStatusText">Syncing time</span></div>
@@ -972,28 +996,53 @@
     let frameCount = 0;
     let lastFrameTime = Date.now();
     let touchTaps = [];
-    const TRIPLE_TAP_WINDOW = 700; // ms within which three taps count
+    const TRIPLE_TAP_WINDOW = 700;
     let emailNotificationsEnabled = false;
     let blackoutActive = false;
     let lastScheduleMinute = null;
 
-    document.addEventListener("keydown", (e) => {
-      keySequence += e.key;
-
-      if (keySequence.includes(adminCode)) {
-        adminPanel.classList.add("open");
-        addLog("Admin panel opened", "access");
-        updateAdminPanel();
-        keySequence = "";
-      }
-
+    // SIMPLE KEYBOARD HANDLER - Type 123 to open, ESC to close
+    document.addEventListener("keydown", function(e) {
+      console.log("KEY PRESSED:", e.key, "Current sequence:", keySequence);
+      
+      // ESC closes panel
       if (e.key === "Escape") {
-        adminPanel.classList.remove("open");
+        const panel = document.getElementById("adminPanel");
+        if (panel) {
+          panel.classList.remove("open");
+          console.log("✓ Panel closed");
+        }
+        keySequence = "";
+        return;
+      }
+
+      // Add key to sequence
+      keySequence += e.key;
+      console.log("Sequence now:", keySequence);
+      
+      // Check for "123"
+      if (keySequence.indexOf("123") !== -1) {
+        const panel = document.getElementById("adminPanel");
+        console.log("FOUND 123! Panel element:", panel);
+        if (panel) {
+          panel.classList.add("open");
+          panel.style.display = "flex";
+          console.log("✓✓✓ ADMIN PANEL OPENED! Press ESC to close.");
+          try {
+            addLog("Admin panel opened", "access");
+            updateAdminPanel();
+          } catch(err) {
+            console.log("Note: some admin functions not ready yet");
+          }
+        } else {
+          console.error("ERROR: adminPanel element not found!");
+        }
         keySequence = "";
       }
 
-      if (keySequence.length > 10) {
-        keySequence = keySequence.slice(-10);
+      // Keep sequence manageable
+      if (keySequence.length > 20) {
+        keySequence = keySequence.substring(keySequence.length - 10);
       }
     });
 
@@ -1090,7 +1139,6 @@
 
     // Themes
     initializeThemes();
-    const panelPosition = document.getElementById("panelPosition");
     if (panelPosition) {
       panelPosition.addEventListener("change", (e) => {
         try {
@@ -1103,7 +1151,6 @@
         }
       });
     }
-    const compactModeToggle = document.getElementById("compactModeToggle");
     if (compactModeToggle) {
       compactModeToggle.addEventListener("change", (e) => {
         try {
@@ -1212,8 +1259,6 @@
       });
     }
 
-    const brightnessSlider = document.getElementById("brightnessSlider");
-    const contrastSlider = document.getElementById("contrastSlider");
     if (brightnessSlider) {
       brightnessSlider.addEventListener("input", (e) => {
         try {
@@ -1332,8 +1377,6 @@
         addLog("Error resetting settings: " + err.message, "error");
       }
     });
-      }
-    });
 
     document.getElementById("diagnosticsBtn").addEventListener("click", () => {
       const diagnostics = {
@@ -1388,11 +1431,16 @@
         addLog("Error showing access log: " + err.message, "error");
       }
     });
-    });
 
-    autoOffToggle.addEventListener("change", (e) => {
-      addLog("Auto-off mode: " + (e.target.checked ? "ON" : "OFF"), "control");
-    });
+    if (autoOffToggle) {
+      autoOffToggle.addEventListener("change", (e) => {
+        try {
+          addLog("Auto-off mode: " + (e.target.checked ? "ON" : "OFF"), "control");
+        } catch (err) {
+          console.error("Error in autoOffToggle:", err);
+        }
+      });
+    }
 
     // Settings persistence
     function saveSettings() {
@@ -2096,10 +2144,15 @@
         if (syncStatusText) syncStatusText.textContent = 'Synced';
         addLog('Time synced (mean offset: ' + Math.round(meanOffset) + 'ms, latency: ' + latency + 'ms, samples: ' + best.length + ')', 'sync');
       } catch (err) {
+        console.warn('Time sync failed, using local time:', err.message);
         if (syncIndicator) syncIndicator.className = 'sync-light error';
         syncStatus.className = 'error';
         if (syncStatusText) syncStatusText.textContent = 'Offline using local time';
         addLog('Sync failed: ' + (err && err.message), 'error');
+        // Fallback: use local time
+        perfNowAtSync = performance.now();
+        serverTimeAtPerfNow = Date.now();
+        latency = 0;
       }
     }
 
@@ -2132,9 +2185,14 @@
 
     function showSlide(index) {
       try {
-        if (!Array.isArray(images) || !images[index] || !slide) return;
-        // update DOM only if changed
-        if (slide.src !== images[index]) slide.src = images[index];
+        if (!Array.isArray(images) || !images[index] || !slide) {
+          console.error("Show slide failed - invalid data:", { hasImages: Array.isArray(images), imageCount: images?.length, index, hasSlideElement: !!slide });
+          return;
+        }
+        // Always set the image src
+        slide.src = images[index];
+        slide.style.display = 'block';
+        console.log("Showing slide:", index + 1, "/", images.length, "[", images[index], "]");
         if (slideCounter) slideCounter.textContent = (index + 1) + "/" + images.length;
         if (!slideViews[index]) slideViews[index] = 0;
         slideViews[index]++;
@@ -2192,7 +2250,13 @@
     }
 
     async function startSlideshow() {
-      await syncTime();
+      try {
+        await syncTime();
+      } catch (err) {
+        console.error('Initial sync failed, continuing with local time:', err);
+        perfNowAtSync = performance.now();
+        serverTimeAtPerfNow = Date.now();
+      }
 
       preloadImages();
 
@@ -2314,11 +2378,19 @@
 
     // Load settings before starting slideshow to apply state
     loadSettings();
+    
+    // Show first slide immediately
+    console.log("Initializing slideshow with", images.length, "images");
+    if (images.length > 0) {
+      showSlide(0);
+      console.log("First slide displayed immediately");
+    } else {
+      console.error("NO IMAGES FOUND!");
+    }
+    
     startSlideshow();
   </script>
 
-  <div style="position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: #666; font-family: Arial, sans-serif;">V5.0.0</div>
-</body>
 </html>
 
 
