@@ -422,6 +422,8 @@
     let autoDimEnabled = false;
     let emergencyMode = false;
     let syncAlarmEnabled = false; // Warning sound for sync failures
+    let alarmTestActive = false; // Track if 'A' key is held for alarm testing
+    let alarmTestInterval = null;
     let brightness = 100;
     let contrast = 100;
     let startTime = Date.now();
@@ -445,8 +447,8 @@
     }
 
     // Play horrific alarm sound when sync fails
-    function playAlarmSound() {
-      if (!syncAlarmEnabled) return;
+    function playAlarmSound(forcePlay = false) {
+      if (!syncAlarmEnabled && !forcePlay) return;
       
       // Create audio context for synthesized alarm
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -475,7 +477,39 @@
         oscillator.stop(audioContext.currentTime + duration);
       }
       
-      addLog("🚨 SYNC ALARM TRIGGERED - LOUD WARNING!");
+      if (forcePlay) {
+        addLog("🚨 ALARM TEST - Hold 'A' to continue");
+      } else {
+        addLog("🚨 SYNC ALARM TRIGGERED - LOUD WARNING!");
+      }
+    }
+    
+    // Start alarm testing (hold 'A' key)
+    function startAlarmTest() {
+      if (alarmTestActive) return;
+      alarmTestActive = true;
+      addLog("🚨 ALARM TEST STARTED - Hold 'A' to continue, release to stop");
+      
+      // Play immediately
+      playAlarmSound(true);
+      
+      // Play every 2 seconds while held
+      alarmTestInterval = setInterval(() => {
+        if (alarmTestActive) {
+          playAlarmSound(true);
+        }
+      }, 2000);
+    }
+    
+    // Stop alarm testing (release 'A' key)
+    function stopAlarmTest() {
+      if (!alarmTestActive) return;
+      alarmTestActive = false;
+      if (alarmTestInterval) {
+        clearInterval(alarmTestInterval);
+        alarmTestInterval = null;
+      }
+      addLog("✓ ALARM TEST STOPPED");
     }
 
     function updateStatusDisplay() {
@@ -793,6 +827,12 @@
         toggleFullscreen();
         return;
       }
+      
+      // Hold 'A' to test alarm sound
+      if ((e.key === "a" || e.key === "A") && !e.repeat) {
+        startAlarmTest();
+        return;
+      }
 
       keySequence += e.key;
       if (keySequence.indexOf("123") !== -1) {
@@ -803,6 +843,14 @@
 
       if (keySequence.length > 10) {
         keySequence = keySequence.slice(-10);
+      }
+    });
+    
+    // Handle key release for alarm testing
+    document.addEventListener("keyup", (e) => {
+      // Release 'A' to stop alarm test
+      if (e.key === "a" || e.key === "A") {
+        stopAlarmTest();
       }
     });
 
