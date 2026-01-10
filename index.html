@@ -27,6 +27,13 @@
       max-width: 100%;
       max-height: 100%;
       object-fit: contain;
+      transition: opacity 0.5s ease-in-out;
+    }
+    #slideshow.paused {
+      border: 5px solid #ff0000;
+    }
+    #slideshow.fade img {
+      transition: opacity 1s ease-in-out;
     }
     #syncIndicator {
       position: fixed;
@@ -155,10 +162,58 @@
       color: #666;
       margin-top: 20px;
     }
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .slider-container input[type="range"] {
+      flex: 1;
+      height: 4px;
+      background: rgba(0, 255, 153, 0.3);
+      border-radius: 2px;
+      outline: none;
+    }
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+      width: 15px;
+      height: 15px;
+      background: #00ff99;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+    .slider-container span {
+      min-width: 40px;
+      text-align: right;
+    }
+    #emergencyOverlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #ff0000;
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      padding: 20px;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
   </style>
 </head>
 <body>
   <div id="syncIndicator" class="local">⚪ SYNCING...</div>
+  
+  <div id="emergencyOverlay"></div>
   
   <div id="slideshow">
     <img id="slide" src="ads/ad1.png" alt="Ad" />
@@ -199,6 +254,32 @@
           <button class="admin-btn" onclick="prevSlide()">← Prev</button>
           <button class="admin-btn" onclick="nextSlide()">Next →</button>
         </div>
+        <div class="admin-row">
+          <button class="admin-btn" id="pauseBtn" onclick="togglePause()">⏸️ Pause</button>
+          <button class="admin-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h2>🎨 Display Settings</h2>
+        <div class="admin-row">
+          <label>Brightness:</label>
+          <div class="slider-container">
+            <input type="range" id="brightnessSlider" min="50" max="150" value="100" oninput="updateBrightness()">
+            <span id="brightnessValue">100%</span>
+          </div>
+        </div>
+        <div class="admin-row">
+          <label>Contrast:</label>
+          <div class="slider-container">
+            <input type="range" id="contrastSlider" min="50" max="150" value="100" oninput="updateContrast()">
+            <span id="contrastValue">100%</span>
+          </div>
+        </div>
+        <div class="admin-row">
+          <button class="admin-btn" onclick="toggleTransitions()">✨ Toggle Fade</button>
+          <button class="admin-btn" onclick="toggleAutoDim()">🌙 Auto-Dim</button>
+        </div>
       </div>
 
       <div class="admin-section">
@@ -208,9 +289,39 @@
       </div>
 
       <div class="admin-section">
+        <h2>� Statistics</h2>
+        <div class="admin-row">
+          <label>Uptime:</label>
+          <span id="statusUptime">0s</span>
+        </div>
+        <div class="admin-row">
+          <label>Total Errors:</label>
+          <span id="statusErrors">0</span>
+        </div>
+        <div class="admin-row">
+          <label>Impressions:</label>
+          <span id="statusImpressions">0</span>
+        </div>
+        <div class="admin-row">
+          <label>Cycles:</label>
+          <span id="statusCycles">0</span>
+        </div>
+      </div>
+
+      <div class="admin-section">
         <h2>🔧 Utilities</h2>
         <button class="admin-btn" onclick="reloadPage()">🔄 Reload Page</button>
         <button class="admin-btn" onclick="clearLogs()">Clear Logs</button>
+        <button class="admin-btn" onclick="exportLogs()">💾 Export Logs</button>
+        <button class="admin-btn" onclick="resetStats()">📊 Reset Stats</button>
+      </div>
+
+      <div class="admin-section" style="grid-column: 1/-1;">
+        <h2>🚨 Emergency Broadcast</h2>
+        <div class="admin-row">
+          <input type="text" id="emergencyText" placeholder="Enter emergency message..." style="flex: 1; width: auto; min-width: 300px;">
+          <button class="admin-btn" onclick="toggleEmergency()">🔴 BROADCAST</button>
+        </div>
       </div>
 
       <div class="admin-section" style="grid-column: 1/-1;">
@@ -235,7 +346,7 @@
     const syncIndicator = document.getElementById("syncIndicator");
     const adminPanel = document.getElementById("adminPanel");
     const logViewer = document.getElementById("logViewer");
-    const slideDuration = 10000; // 10 seconds per slide
+    let slideDuration = 10000; // 10 seconds per slide
     
     // Time sync variables
     let serverTimeOffset = 0;
@@ -243,6 +354,18 @@
     let lastSyncLatency = 0;
     let systemLog = [];
     let keySequence = "";
+    
+    // Feature toggles and stats
+    let isPaused = false;
+    let fadeEnabled = false;
+    let autoDimEnabled = false;
+    let emergencyMode = false;
+    let brightness = 100;
+    let contrast = 100;
+    let startTime = Date.now();
+    let totalErrors = 0;
+    let totalImpressions = 0;
+    let totalCycles = 0;
 
     function addLog(msg) {
       const time = new Date().toLocaleTimeString();
@@ -272,6 +395,26 @@
       }
       if (document.getElementById("statusLatency")) {
         document.getElementById("statusLatency").textContent = lastSyncLatency + "ms";
+      }
+      
+      // Update stats
+      const uptime = Math.floor((Date.now() - startTime) / 1000);
+      const hours = Math.floor(uptime / 3600);
+      const mins = Math.floor((uptime % 3600) / 60);
+      const secs = uptime % 60;
+      const uptimeStr = hours > 0 ? hours + "h " + mins + "m" : mins > 0 ? mins + "m " + secs + "s" : secs + "s";
+      
+      if (document.getElementById("statusUptime")) {
+        document.getElementById("statusUptime").textContent = uptimeStr;
+      }
+      if (document.getElementById("statusErrors")) {
+        document.getElementById("statusErrors").textContent = totalErrors;
+      }
+      if (document.getElementById("statusImpressions")) {
+        document.getElementById("statusImpressions").textContent = totalImpressions;
+      }
+      if (document.getElementById("statusCycles")) {
+        document.getElementById("statusCycles").textContent = totalCycles;
       }
     }
 
@@ -309,6 +452,7 @@
           syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
           return true;
         } catch (err) {
+          totalErrors++;
           addLog("✗ Sync attempt " + (attempt + 1) + " failed: " + err.message);
           
           if (attempt < maxRetries - 1) {
@@ -320,6 +464,7 @@
       }
       
       // All retries exhausted
+      totalErrors++;
       serverTimeOffset = 0;
       syncedTime = false;
       addLog("✗ SYNC FAILED AFTER 5 ATTEMPTS");
@@ -333,17 +478,43 @@
     }
 
     function updateSlide() {
+      if (isPaused || emergencyMode) return;
+      
       const serverTime = getServerTime();
       const cycleTime = serverTime % (slideDuration * images.length);
       const newIndex = Math.floor(cycleTime / slideDuration);
       
       if (newIndex !== currentIndex) {
-        currentIndex = newIndex;
-        slideElement.src = images[currentIndex];
+        // Fade effect
+        if (fadeEnabled) {
+          slideElement.style.opacity = "0";
+          setTimeout(() => {
+            currentIndex = newIndex;
+            slideElement.src = images[currentIndex];
+            slideElement.style.opacity = "1";
+          }, 500);
+        } else {
+          currentIndex = newIndex;
+          slideElement.src = images[currentIndex];
+        }
+        
+        totalImpressions++;
         console.log("Slide", currentIndex + 1, "| Server time:", new Date(serverTime).toISOString());
+        
+        // Auto-dim at night (10pm - 6am)
+        if (autoDimEnabled) {
+          const hour = new Date(serverTime).getHours();
+          if (hour >= 22 || hour < 6) {
+            if (brightness > 70) {
+              brightness = 70;
+              updateBrightness();
+            }
+          }
+        }
         
         // Reload page when cycle completes (after showing all 3 ads)
         if (previousIndex === 2 && currentIndex === 0) {
+          totalCycles++;
           addLog("Cycle complete - reloading page");
           setTimeout(() => location.reload(), 500);
         }
@@ -405,6 +576,104 @@
       addLog("Logs cleared");
     }
 
+    function togglePause() {
+      isPaused = !isPaused;
+      const btn = document.getElementById("pauseBtn");
+      const slideshow = document.getElementById("slideshow");
+      if (isPaused) {
+        btn.textContent = "▶️ Resume";
+        slideshow.classList.add("paused");
+        addLog("Slideshow paused");
+      } else {
+        btn.textContent = "⏸️ Pause";
+        slideshow.classList.remove("paused");
+        addLog("Slideshow resumed");
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        addLog("Entered fullscreen");
+      } else {
+        document.exitFullscreen();
+        addLog("Exited fullscreen");
+      }
+    }
+
+    function updateBrightness() {
+      brightness = document.getElementById("brightnessSlider").value;
+      document.getElementById("brightnessValue").textContent = brightness + "%";
+      applyFilters();
+    }
+
+    function updateContrast() {
+      contrast = document.getElementById("contrastSlider").value;
+      document.getElementById("contrastValue").textContent = contrast + "%";
+      applyFilters();
+    }
+
+    function applyFilters() {
+      slideElement.style.filter = "brightness(" + brightness + "%) contrast(" + contrast + "%)";
+    }
+
+    function toggleTransitions() {
+      fadeEnabled = !fadeEnabled;
+      const slideshow = document.getElementById("slideshow");
+      if (fadeEnabled) {
+        slideshow.classList.add("fade");
+        addLog("Fade transitions enabled");
+      } else {
+        slideshow.classList.remove("fade");
+        slideElement.style.opacity = "1";
+        addLog("Fade transitions disabled");
+      }
+    }
+
+    function toggleAutoDim() {
+      autoDimEnabled = !autoDimEnabled;
+      addLog("Auto-dim " + (autoDimEnabled ? "enabled" : "disabled"));
+    }
+
+    function toggleEmergency() {
+      const overlay = document.getElementById("emergencyOverlay");
+      const text = document.getElementById("emergencyText").value;
+      
+      if (!emergencyMode && text.trim()) {
+        emergencyMode = true;
+        overlay.textContent = text;
+        overlay.style.display = "flex";
+        addLog("EMERGENCY BROADCAST ACTIVATED");
+      } else {
+        emergencyMode = false;
+        overlay.style.display = "none";
+        addLog("Emergency broadcast ended");
+      }
+    }
+
+    function exportLogs() {
+      const logText = systemLog.join("\n");
+      const blob = new Blob([logText], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "slideshow-logs-" + new Date().toISOString().slice(0, 19).replace(/:/g, "-") + ".txt";
+      a.click();
+      URL.revokeObjectURL(url);
+      addLog("Logs exported");
+    }
+
+    function resetStats() {
+      if (confirm("Reset all statistics?")) {
+        startTime = Date.now();
+        totalErrors = 0;
+        totalImpressions = 0;
+        totalCycles = 0;
+        addLog("Statistics reset");
+        updateStatusDisplay();
+      }
+    }
+
     // Keyboard handler
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
@@ -417,6 +686,12 @@
       if (e.key === "0") {
         addLog("Force reload triggered (key 0)");
         location.reload();
+        return;
+      }
+
+      // Press F for fullscreen
+      if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
         return;
       }
 
