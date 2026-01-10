@@ -230,6 +230,7 @@
     ];
     
     let currentIndex = 0;
+    let previousIndex = -1;
     const slideElement = document.getElementById("slide");
     const syncIndicator = document.getElementById("syncIndicator");
     const adminPanel = document.getElementById("adminPanel");
@@ -274,48 +275,30 @@
       }
     }
 
-    // Get accurate server time - FAST PARALLEL REQUESTS
+    // Get accurate server time - WORLDTIMEAPI ONLY
     async function syncServerTime() {
       const t0 = performance.now();
       
-      // Parallel requests with short timeout
-      const withTimeout = (promise, ms) => Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms))
-      ]);
-      
-      const syncSources = [
-        { name: "worldtimeapi", fetch: () => withTimeout(fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" }).then(r => r.json()), 2000).then(d => new Date(d.datetime).getTime()) },
-        { name: "cloudflare", fetch: () => withTimeout(fetch("https://time.cloudflare.com/api/v1/now", { cache: "no-store" }).then(r => r.json()), 2000).then(d => d.now_ms) },
-        { name: "local-head", fetch: () => withTimeout(fetch(window.location.href, { method: "HEAD", cache: "no-store" }), 1000).then(r => new Date(r.headers.get("date")).getTime()) }
-      ];
-      
       try {
-        // Try ALL sources in parallel - take first success
-        const results = await Promise.allSettled(syncSources.map(s => s.fetch()));
-        const successful = results.findIndex(r => r.status === "fulfilled");
+        const response = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
+        const data = await response.json();
+        const serverMs = new Date(data.datetime).getTime();
+        const localMs = Date.now();
+        const t1 = performance.now();
+        lastSyncLatency = Math.round(t1 - t0);
+        serverTimeOffset = serverMs - localMs;
+        syncedTime = true;
         
-        if (successful !== -1) {
-          const serverMs = results[successful].value;
-          const localMs = Date.now();
-          const t1 = performance.now();
-          lastSyncLatency = Math.round(t1 - t0);
-          serverTimeOffset = serverMs - localMs;
-          syncedTime = true;
-          
-          addLog("✓ SYNCED (latency: " + lastSyncLatency + "ms)");
-          syncIndicator.className = "synced";
-          syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
-          return true;
-        }
-        
-        throw new Error("All sources failed");
+        addLog("✓ SYNCED (latency: " + lastSyncLatency + "ms)");
+        syncIndicator.className = "synced";
+        syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
+        return true;
       } catch (err) {
         serverTimeOffset = 0;
         syncedTime = false;
-        addLog("✗ Using local time");
-        syncIndicator.className = "local";
-        syncIndicator.textContent = "🟡 LOCAL TIME";
+        addLog("✗ SYNC FAILED: " + err.message);
+        syncIndicator.className = "error";
+        syncIndicator.textContent = "🔴 SYNC ERROR";
         return false;
       }
     }
@@ -333,6 +316,14 @@
         currentIndex = newIndex;
         slideElement.src = images[currentIndex];
         console.log("Slide", currentIndex + 1, "| Server time:", new Date(serverTime).toISOString());
+        
+        // Reload page when cycle completes (after showing all 3 ads)
+        if (previousIndex === 2 && currentIndex === 0) {
+          addLog("Cycle complete - reloading page");
+          setTimeout(() => location.reload(), 500);
+        }
+        
+        previousIndex = currentIndex;
       }
     }
 
