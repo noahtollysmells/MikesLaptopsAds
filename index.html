@@ -452,7 +452,7 @@
       
       // Create audio context for synthesized alarm
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const duration = 2; // 2 seconds of pure terror
+      const duration = 0.6; // 0.6 seconds of FAST pure terror
       
       // Create MANY oscillators with chaotic frequencies for maximum terror
       const frequencies = [
@@ -505,12 +505,12 @@
       // Play immediately
       playAlarmSound(true);
       
-      // Play every 2 seconds while held
+      // Play every 800ms while held
       alarmTestInterval = setInterval(() => {
         if (alarmTestActive) {
           playAlarmSound(true);
         }
-      }, 2000);
+      }, 800);
     }
     
     // Stop alarm testing (release 'A' key)
