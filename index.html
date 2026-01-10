@@ -446,41 +446,53 @@
       }
     }
 
-    // Play horrific alarm sound when sync fails
+    // Play TERRIFYING alarm sound when sync fails
     function playAlarmSound(forcePlay = false) {
       if (!syncAlarmEnabled && !forcePlay) return;
       
       // Create audio context for synthesized alarm
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const duration = 2; // 2 seconds of alarm
+      const duration = 2; // 2 seconds of pure terror
       
-      // Create multiple oscillators for horrific sound
-      for (let i = 0; i < 3; i++) {
+      // Create MANY oscillators with chaotic frequencies for maximum terror
+      const frequencies = [
+        { start: 80, end: 1200, type: 'sawtooth' },
+        { start: 120, end: 950, type: 'square' },
+        { start: 200, end: 1400, type: 'sawtooth' },
+        { start: 150, end: 1100, type: 'triangle' },
+        { start: 90, end: 1300, type: 'sawtooth' },
+        { start: 180, end: 1000, type: 'square' },
+        { start: 110, end: 1250, type: 'triangle' }
+      ];
+      
+      frequencies.forEach((freqConfig, idx) => {
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         
-        // Different frequencies for chaotic sound
-        oscillator.frequency.setValueAtTime(400 + (i * 300), audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(800 + (i * 400), audioContext.currentTime + duration);
+        // Chaotic frequency sweeps for maximum horror
+        oscillator.frequency.setValueAtTime(freqConfig.start, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(freqConfig.end, audioContext.currentTime + duration * 0.7);
+        oscillator.frequency.exponentialRampToValueAtTime(freqConfig.start * 0.8, audioContext.currentTime + duration);
         
-        // Sawtooth wave for harsh sound
-        oscillator.type = 'sawtooth';
+        // Different wave types for dissonant chaos
+        oscillator.type = freqConfig.type;
         
-        // Loud volume with pulsing
-        gainNode.gain.setValueAtTime(0.8, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+        // EXTREMELY LOUD - maximum volume for maximum terror
+        gainNode.gain.setValueAtTime(0.95, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.85, audioContext.currentTime + duration * 0.3);
+        gainNode.gain.exponentialRampToValueAtTime(0.02, audioContext.currentTime + duration);
         
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + duration);
-      }
+      });
       
       if (forcePlay) {
-        addLog("🚨 ALARM TEST - Hold 'A' to continue");
+        addLog("🚨 ALARM TEST - Hold 'A' to continue - MAXIMUM VOLUME WARNING");
       } else {
-        addLog("🚨 SYNC ALARM TRIGGERED - LOUD WARNING!");
+        addLog("🚨 SYNC ALARM TRIGGERED - TERRIFYING ALERT - VOLUME AT MAXIMUM");
       }
     }
     
