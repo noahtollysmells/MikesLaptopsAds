@@ -930,11 +930,72 @@
       
       // Resync every 2 seconds for ultra-fast millisecond accuracy across all devices
       setInterval(syncServerTime, 2000);
+      
+      // Poll Discord channel for broadcast messages every 2 seconds
+      pollDiscordBroadcast();
+      setInterval(pollDiscordBroadcast, 2000);
+    }
+    
+    // Poll Discord channel for latest message
+    async function pollDiscordBroadcast() {
+      const CHANNEL_ID = "1459695675167084618";
+      try {
+        const res = await fetch(`https://discord.com/api/v10/channels/${CHANNEL_ID}/messages?limit=1`, {
+          cache: 'no-store'
+        });
+        
+        if (!res.ok) return;
+        const messages = await res.json();
+        
+        if (messages.length > 0) {
+          const message = messages[0];
+          const overlay = document.getElementById("emergencyOverlay");
+          overlay.textContent = message.content;
+          overlay.style.display = "flex";
+          overlay.style.background = "#ff0000";
+          emergencyMode = true;
+          addLog("📡 DISCORD BROADCAST: " + message.content);
+        }
+      } catch (err) {
+        // Silently fail if API unavailable
+      }
     }
 
     start();
   </script>
 </body>
 </html>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+  <script>
+    // FIREBASE CONFIG - Replace these with your values from Firebase Console
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com"
+    };
+    
+    // Initialize Firebase
+    let db;
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      
+      // Listen for broadcast messages in real-time
+      db.ref('broadcast/message').on('value', (snapshot) => {
+        const message = snapshot.val();
+        if (message && message.text) {
+          // Display broadcast message
+          const overlay = document.getElementById("emergencyOverlay");
+          overlay.textContent = message.text;
+          overlay.style.display = "flex";
+          overlay.style.background = message.color || "#ff0000";
+          emergencyMode = true;
+          addLog("📡 BROADCAST RECEIVED: " + message.text);
+        }
+      });
+    } catch (err) {
+      console.log("Firebase not configured - broadcasts disabled. Set up Firebase to enable.");
+    }
+  </script>
 
 
