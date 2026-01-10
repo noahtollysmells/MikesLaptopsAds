@@ -514,67 +514,48 @@
       }
     }
 
-    // Perfect millisecond sync using multiple APIs with redundancy
+    // Perfect millisecond sync using GitHub Pages server time
     async function syncServerTime() {
       const t0 = performance.now();
       
-      // Try multiple time APIs for best reliability
-      const apis = [
-        { url: "https://worldtimeapi.org/api/timezone/Etc/UTC", name: "WorldTimeAPI" },
-        { url: "https://timeapi.io/api/time/current/zone?timeZone=Etc/UTC", name: "TimeAPI.io" }
-      ];
-      
-      for (const api of apis) {
-        try {
-          const res = await Promise.race([
-            fetch(api.url, { cache: "no-store" }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
-          ]);
-          
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
-          
-          // Parse response based on API format
-          let serverMs;
-          if (data.unixtime) {
-            // worldtimeapi format
-            serverMs = data.unixtime * 1000;
-          } else if (data.milliSeconds) {
-            // timeapi.io format
-            serverMs = data.milliSeconds;
-          } else {
-            throw new Error("Unknown response format");
-          }
-          
-          const localMs = Date.now();
-          const t1 = performance.now();
-          lastSyncLatency = Math.round(t1 - t0);
-          serverTimeOffset = serverMs - localMs;
-          syncedTime = true;
-          currentAPI = api.name;
-          
-          addLog("✓ SYNCED to " + api.name + " - latency: " + lastSyncLatency + "ms - offset: " + serverTimeOffset + "ms");
-          syncIndicatorElement.className = "synced";
-          syncIndicatorElement.textContent = "🟢 " + api.name + " - " + lastSyncLatency + "ms";
-          return true;
-        } catch (err) {
-          // Try next API
-          console.log("API failed: " + api.name + " - " + err.message);
-        }
+      try {
+        // Fetch from GitHub Pages to get server time from response headers
+        const res = await Promise.race([
+          fetch(window.location.href, { method: "HEAD", cache: "no-store" }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+        ]);
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        // Get server time from Date header
+        const dateHeader = res.headers.get('date');
+        if (!dateHeader) throw new Error("No date header");
+        
+        const serverMs = new Date(dateHeader).getTime();
+        const localMs = Date.now();
+        const t1 = performance.now();
+        lastSyncLatency = Math.round(t1 - t0);
+        serverTimeOffset = serverMs - localMs;
+        syncedTime = true;
+        currentAPI = "GitHub Pages";
+        
+        addLog("✓ SYNCED to GitHub Pages - latency: " + lastSyncLatency + "ms - offset: " + serverTimeOffset + "ms");
+        syncIndicatorElement.className = "synced";
+        syncIndicatorElement.textContent = "🟢 GitHub Pages - " + lastSyncLatency + "ms";
+        return true;
+      } catch (err) {
+        addLog("✗ Sync failed: " + err.message);
+        syncIndicatorElement.className = "error";
+        syncIndicatorElement.textContent = "🔴 SYNC ERROR";
+        currentAPI = "";
+        
+        // Play horrific alarm if enabled
+        playAlarmSound();
+        
+        // Retry in 2 seconds
+        setTimeout(syncServerTime, 2000);
+        return false;
       }
-      
-      // All APIs failed
-      addLog("✗ Sync failed - all APIs unavailable");
-      syncIndicatorElement.className = "error";
-      syncIndicatorElement.textContent = "🔴 SYNC ERROR";
-      currentAPI = "";
-      
-      // Play horrific alarm if enabled
-      playAlarmSound();
-      
-      // Retry in 2 seconds
-      setTimeout(syncServerTime, 2000);
-      return false;
     }
 
     function getServerTime() {
