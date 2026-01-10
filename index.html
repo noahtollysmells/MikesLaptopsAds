@@ -153,6 +153,15 @@
     .admin-btn:hover {
       background: #00dd77;
     }
+    .admin-btn[onclick*="Alarm"],
+    .admin-btn[onclick*="alarm"] {
+      color: #ffffff !important;
+      background: #ff0000 !important;
+    }
+    .admin-btn[onclick*="Alarm"]:hover,
+    .admin-btn[onclick*="alarm"]:hover {
+      background: #cc0000 !important;
+    }
     #logViewer {
       background: rgba(0, 0, 0, 0.5);
       border: 1px solid #00ff99;
@@ -379,7 +388,7 @@
         <button class="admin-btn" onclick="exportLogs()">💾 Export Logs</button>
         <button class="admin-btn" onclick="resetStats()">📊 Reset Stats</button>
         <button class="admin-btn" onclick="clearServerConfig()" style="background: #ff6600;">⚙️ Reconfigure Server</button>
-        <button class="admin-btn" onclick="toggleSyncAlarm()" style="background: #ff0000;">🚨 Sync Alarm</button>
+        <button class="admin-btn" onclick="toggleSyncAlarm()" style="background: #ff0000; color: #ffffff;">🚨 Sync Alarm</button>
       </div>
 
       <div class="admin-section" style="grid-column: 1/-1;">
@@ -435,6 +444,7 @@
     let syncAlarmEnabled = false; // Warning sound for sync failures
     let alarmTestActive = false; // Track if 'A' key is held for alarm testing
     let alarmTestInterval = null;
+    let currentAlarm = null; // Track current alarm playback
     let brightness = 100;
     let contrast = 100;
     let startTime = Date.now();
@@ -461,11 +471,17 @@
     function playAlarmSound(forcePlay = false) {
       if (!syncAlarmEnabled && !forcePlay) return;
       
+      // Stop previous alarm if still playing
+      if (currentAlarm) {
+        currentAlarm.pause();
+        currentAlarm.currentTime = 0;
+      }
+      
       // Create and play the alarm MP3
-      const alarm = new Audio('syncalarm.mp3');
-      alarm.volume = 1.0; // Maximum volume
-      alarm.currentTime = 0; // Start from beginning
-      alarm.play().catch(err => console.log("Alarm play failed:", err));
+      currentAlarm = new Audio('syncalarm.mp3');
+      currentAlarm.volume = 1.0; // Maximum volume
+      currentAlarm.currentTime = 0; // Start from beginning
+      currentAlarm.play().catch(err => console.log("Alarm play failed:", err));
       
       if (forcePlay) {
         addLog("🚨 ALARM TEST - Hold 'A' to continue - MAXIMUM VOLUME WARNING");
@@ -498,6 +514,12 @@
       if (alarmTestInterval) {
         clearInterval(alarmTestInterval);
         alarmTestInterval = null;
+      }
+      // Stop playing alarm immediately
+      if (currentAlarm) {
+        currentAlarm.pause();
+        currentAlarm.currentTime = 0;
+        currentAlarm = null;
       }
       addLog("✓ ALARM TEST STOPPED");
     }
@@ -543,19 +565,24 @@
       const t0 = performance.now();
       
       try {
-        // Fetch from GitHub Pages to get server time from response headers
+        // Fetch with GET to get server time from response headers
         const res = await Promise.race([
-          fetch(window.location.href, { method: "HEAD", cache: "no-store" }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+          fetch(window.location.href + "?t=" + Date.now(), { 
+            method: "GET", 
+            cache: "no-store"
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
         ]);
         
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         
         // Get server time from Date header
         const dateHeader = res.headers.get('date');
-        if (!dateHeader) throw new Error("No date header");
+        if (!dateHeader) throw new Error("No date header in response");
         
         const serverMs = new Date(dateHeader).getTime();
+        if (isNaN(serverMs)) throw new Error("Invalid date in header");
+        
         const localMs = Date.now();
         const t1 = performance.now();
         lastSyncLatency = Math.round(t1 - t0);
@@ -572,6 +599,7 @@
         syncIndicatorElement.className = "error";
         syncIndicatorElement.textContent = "🔴 SYNC ERROR";
         currentAPI = "";
+        totalErrors++;
         
         // Play horrific alarm if enabled
         playAlarmSound();
@@ -752,11 +780,12 @@
       const flashElement = document.getElementById("alarmFlash");
       const state = syncAlarmEnabled ? "🚨 ALARM ENABLED" : "⭕ ALARM DISABLED";
       const color = syncAlarmEnabled ? "#ff0000" : "#ffff00";
+      const textColor = syncAlarmEnabled ? "#ffffff" : "#ffff00";
       
       flashElement.textContent = state;
       flashElement.style.borderColor = color;
-      flashElement.style.color = color;
-      flashElement.style.textShadow = "0 0 20px " + color;
+      flashElement.style.color = textColor;
+      flashElement.style.textShadow = "0 0 20px " + textColor;
       flashElement.style.boxShadow = "0 0 30px " + color + ", 0 0 60px " + color;
       
       flashElement.classList.remove("show");
@@ -772,6 +801,11 @@
     function toggleSyncAlarm() {
       syncAlarmEnabled = !syncAlarmEnabled;
       addLog("🚨 Sync alarm " + (syncAlarmEnabled ? "ENABLED - will play loud warning on sync failure" : "DISABLED"));
+      if (!syncAlarmEnabled && currentAlarm) {
+        currentAlarm.pause();
+        currentAlarm.currentTime = 0;
+        currentAlarm = null;
+      }
       showAlarmFlash();
     }
 
