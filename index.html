@@ -264,13 +264,6 @@
   </style>
 </head>
 <body>
-  <div id="setupModal" class="show">
-    <h1>🚀 AD SYNC SETUP 🚀</h1>
-    <p>Enter the Linux Mint server IP address:</p>
-    <input type="text" id="serverIPInput" placeholder="e.g., 192.168.1.50" />
-    <button onclick="saveServerConfig()">CONNECT</button>
-  </div>
-
   <div id="syncIndicator" class="local">⚪ SYNCING...</div>
   
   <div id="emergencyOverlay"></div>
@@ -409,16 +402,8 @@
     const logViewer = document.getElementById("logViewer");
     let slideDuration = 30000; // 30 seconds per slide
     
-    // Server configuration - load from localStorage or prompt user
-    let serverURL = localStorage.getItem("serverURL") || "http://localhost:3000";
-    let isServerConfigured = !!localStorage.getItem("serverURL");
-    
-    // Check if setup modal should show
-    if (!isServerConfigured) {
-      document.getElementById("setupModal").classList.add("show");
-    } else {
-      document.getElementById("setupModal").classList.remove("show");
-    }
+    // Auto-connect to mlads.online:3000 (or override if stored in localStorage)
+    let serverURL = localStorage.getItem("serverURL") || "http://mlads.online:3000";
     
     let isCheckingEmergency = false;
     
@@ -598,32 +583,20 @@
     }
 
     // Setup and config functions
-    function saveServerConfig() {
-      const ip = document.getElementById("serverIPInput").value.trim();
-      if (!ip) {
-        alert("Please enter a server IP address");
-        return;
-      }
-      
-      // Format: IP or IP:port
-      let url = ip;
-      if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        url = "http://" + url;
-      }
-      if (!url.includes(":3000") && !url.includes(":")) {
-        url = url + ":3000";
-      }
-      
-      serverURL = url;
-      localStorage.setItem("serverURL", url);
-      document.getElementById("setupModal").classList.remove("show");
-      addLog("✓ Server configured: " + url);
-      syncServerTime();
-    }
-
     function clearServerConfig() {
-      localStorage.removeItem("serverURL");
-      window.location.reload();
+      const newServer = prompt("Enter new server (e.g., mlads.online:3000 or 192.168.1.50:3000):", serverURL);
+      if (newServer) {
+        let url = newServer.trim();
+        if (!url.startsWith("http://")) {
+          url = "http://" + url;
+        }
+        if (!url.includes(":")) {
+          url = url + ":3000";
+        }
+        serverURL = url;
+        localStorage.setItem("serverURL", url);
+        location.reload();
+      }
     }
 
     function manualSync() {
