@@ -498,7 +498,7 @@
       
       try {
         const res = await Promise.race([
-          fetch("http://localhost:3000/api/time", { cache: "no-store" }),
+          fetch(serverURL + "/api/time", { cache: "no-store" }),
           new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
         ]);
         
@@ -576,15 +576,14 @@
       }
     }
 
-    function updateSlide() {
-      if (isPaused || emergencyMode) return;
-      currentIndex = (currentIndex + 1) % images.length;
+    function prevSlide() {
+      currentIndex = (currentIndex - 1 + images.length) % images.length;
       slideElement.src = images[currentIndex];
       addLog("Manual slide change: " + (currentIndex + 1));
     }
 
-    function prevSlide() {
-      currentIndex = (currentIndex - 1 + images.length) % images.length;
+    function nextSlide() {
+      currentIndex = (currentIndex + 1) % images.length;
       slideElement.src = images[currentIndex];
       addLog("Manual slide change: " + (currentIndex + 1));
     }
