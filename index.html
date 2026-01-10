@@ -402,11 +402,6 @@
     const logViewer = document.getElementById("logViewer");
     let slideDuration = 30000; // 30 seconds per slide
     
-    // Auto-connect to mlads.online:3000 (or override if stored in localStorage)
-    // Use same protocol as page (HTTPS if page is HTTPS, HTTP if page is HTTP)
-    const defaultProtocol = window.location.protocol === "https:" ? "https://" : "http://";
-    let serverURL = localStorage.getItem("serverURL") || (defaultProtocol + "mlads.online:3000");
-    
     let isCheckingEmergency = false;
     
     // Time sync variables
@@ -451,12 +446,6 @@
       if (document.getElementById("statusSlide")) {
         document.getElementById("statusSlide").textContent = (currentIndex + 1) + "/3";
       }
-      if (document.getElementById("statusSync")) {
-        document.getElementById("statusSync").textContent = syncedTime ? "🟢 SYNCED" : "🟡 LOCAL TIME";
-      }
-      if (document.getElementById("statusLatency")) {
-        document.getElementById("statusLatency").textContent = lastSyncLatency + "ms";
-      }
       
       // Update stats
       const uptime = Math.floor((Date.now() - startTime) / 1000);
@@ -479,42 +468,9 @@
       }
     }
 
-    // Get accurate server time from local Python sync server
-    async function syncServerTime() {
-      const t0 = performance.now();
-      
-      try {
-        const res = await Promise.race([
-          fetch(serverURL + "/api/time", { cache: "no-store" }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
-        ]);
-        
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const serverMs = data.timestamp;
-        const localMs = Date.now();
-        const t1 = performance.now();
-        lastSyncLatency = Math.round(t1 - t0);
-        serverTimeOffset = serverMs - localMs;
-        syncedTime = true;
-        
-        addLog("✓ SYNCED (local server) - latency: " + lastSyncLatency + "ms");
-        syncIndicator.className = "synced";
-        syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
-        return true;
-      } catch (err) {
-        addLog("✗ Sync failed: " + err.message);
-        syncIndicator.className = "error";
-        syncIndicator.textContent = "🔴 SYNC ERROR";
-        
-        // Retry in 2 seconds
-        setTimeout(syncServerTime, 2000);
-        return false;
-      }
-    }
-
+    // Use local time (no server needed)
     function getServerTime() {
-      return Date.now() + serverTimeOffset;
+      return Date.now();
     }
 
     function updateSlide() {
@@ -586,24 +542,11 @@
 
     // Setup and config functions
     function clearServerConfig() {
-      const newServer = prompt("Enter new server (e.g., mlads.online:3000 or 192.168.1.50:3000):", serverURL);
-      if (newServer) {
-        let url = newServer.trim();
-        if (!url.startsWith("http://")) {
-          url = "http://" + url;
-        }
-        if (!url.includes(":")) {
-          url = url + ":3000";
-        }
-        serverURL = url;
-        localStorage.setItem("serverURL", url);
-        location.reload();
-      }
+      addLog("No server configuration needed");
     }
 
     function manualSync() {
-      addLog("Manual sync requested...");
-      syncServerTime();
+      addLog("Manual sync disabled - using local time");
     }
 
     async function checkLatency() {
@@ -696,65 +639,20 @@
       const text = document.getElementById("emergencyText").value;
       
       if (!emergencyMode && text.trim()) {
-        // Send emergency broadcast to server (broadcast to all devices)
-        fetch(serverURL + "/api/emergency", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, active: true })
-        }).then(r => r.json()).then(data => {
-          if (data.success) {
-            emergencyMode = true;
-            overlay.textContent = text;
-            overlay.style.display = "flex";
-            addLog("🚨 EMERGENCY BROADCAST SENT TO ALL DEVICES: " + text);
-          }
-        }).catch(err => {
-          addLog("❌ Failed to send broadcast: " + err.message);
-        });
+        emergencyMode = true;
+        overlay.textContent = text;
+        overlay.style.display = "flex";
+        addLog("🚨 EMERGENCY MESSAGE DISPLAYED: " + text);
       } else {
-        // Clear emergency broadcast from server
-        fetch(serverURL + "/api/emergency", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: null, active: false })
-        }).then(r => r.json()).then(data => {
-          emergencyMode = false;
-          overlay.style.display = "none";
-          addLog("✓ Emergency broadcast cleared from all devices");
-        }).catch(err => {
-          addLog("❌ Failed to clear broadcast: " + err.message);
-        });
+        emergencyMode = false;
+        overlay.style.display = "none";
+        addLog("✓ Emergency message cleared");
       }
     }
 
     // Check for emergency broadcasts from server (all devices poll for updates)
     async function checkEmergencyBroadcast() {
-      if (isCheckingEmergency) return; // Prevent overlapping requests
-      isCheckingEmergency = true;
-      
-      try {
-        const response = await fetch(serverURL + "/api/emergency", { cache: "no-store" });
-        const data = await response.json();
-        const overlay = document.getElementById("emergencyOverlay");
-        
-        if (data.active && data.message && !emergencyMode) {
-          // Emergency broadcast from another device
-          emergencyMode = true;
-          overlay.textContent = data.message;
-          overlay.style.display = "flex";
-          addLog("🚨 EMERGENCY BROADCAST RECEIVED: " + data.message);
-        } else if (!data.active && emergencyMode) {
-          // Emergency broadcast was cleared
-          emergencyMode = false;
-          overlay.style.display = "none";
-          addLog("✓ Emergency broadcast cleared");
-        }
-      } catch (err) {
-        // Server not available - continue running locally
-        console.log("Emergency server unavailable: " + err.message);
-      }
-      
-      isCheckingEmergency = false;
+      // No server - emergency messages only work on this device
     }
 
     function exportLogs() {
@@ -818,10 +716,7 @@
       console.log("Initializing slideshow with", images.length, "images");
       console.log("Slide duration:", slideDuration / 1000, "seconds");
       
-      addLog("Slideshow started - attempting sync in background");
-      
-      // Try to sync right away but don't block
-      syncServerTime();
+      addLog("Slideshow started - using local time");
       
       // Show initial slide immediately
       updateSlide();
@@ -834,13 +729,6 @@
           updateStatusDisplay();
         }
       }, 100);
-      
-      // Resync every 1 minute to stay accurate
-      setInterval(syncServerTime, 60000);
-      
-      // Check for emergency broadcasts every 2 seconds (all devices poll)
-      setInterval(checkEmergencyBroadcast, 2000);
-      addLog("Emergency broadcast sync enabled - checking server every 2s");
     }
 
     start();
