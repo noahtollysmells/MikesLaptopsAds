@@ -28,9 +28,36 @@
       max-height: 100%;
       object-fit: contain;
     }
+    #syncIndicator {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 5px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      color: white;
+      z-index: 100;
+      border-left: 4px solid #666;
+    }
+    #syncIndicator.synced {
+      border-left-color: #00ff00;
+      color: #00ff00;
+    }
+    #syncIndicator.local {
+      border-left-color: #ffaa00;
+      color: #ffaa00;
+    }
+    #syncIndicator.error {
+      border-left-color: #ff0000;
+      color: #ff0000;
+    }
   </style>
 </head>
 <body>
+  <div id="syncIndicator" class="local">⚪ SYNCING...</div>
+  
   <div id="slideshow">
     <img id="slide" src="ads/ad1.png" alt="Ad" />
   </div>
@@ -44,20 +71,76 @@
     
     let currentIndex = 0;
     const slideElement = document.getElementById("slide");
-    const slideDuration = 10000; // 10 seconds
+    const syncIndicator = document.getElementById("syncIndicator");
+    const slideDuration = 10000; // 10 seconds per slide
+    
+    // Time sync variables
+    let serverTimeOffset = 0; // Milliseconds to add to Date.now() to get server time
+    let syncedTime = false;
 
-    function showNextSlide() {
-      currentIndex = (currentIndex + 1) % images.length;
-      slideElement.src = images[currentIndex];
-      console.log("Showing slide", currentIndex + 1, "of", images.length, ":", images[currentIndex]);
+    // Get accurate server time
+    async function syncServerTime() {
+      try {
+        console.log("Syncing with server time...");
+        const response = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
+        const data = await response.json();
+        const serverMs = new Date(data.datetime).getTime();
+        const localMs = Date.now();
+        serverTimeOffset = serverMs - localMs;
+        syncedTime = true;
+        console.log("✓ Time synced! Offset:", serverTimeOffset, "ms");
+        
+        // Update indicator
+        syncIndicator.className = "synced";
+        syncIndicator.textContent = "🟢 SYNCED (Server Time)";
+        return true;
+      } catch (err) {
+        console.warn("Sync failed, using local time:", err.message);
+        serverTimeOffset = 0;
+        syncedTime = false;
+        
+        // Update indicator
+        syncIndicator.className = "local";
+        syncIndicator.textContent = "🟡 LOCAL TIME (Offline)";
+        return false;
+      }
     }
 
-    // Start the slideshow
-    console.log("Slideshow starting with", images.length, "images");
-    console.log("Each slide displays for", slideDuration / 1000, "seconds");
-    
-    // Change slides every 10 seconds
-    setInterval(showNextSlide, slideDuration);
+    function getServerTime() {
+      return Date.now() + serverTimeOffset;
+    }
+
+    function updateSlide() {
+      const serverTime = getServerTime();
+      const cycleTime = serverTime % (slideDuration * images.length);
+      const newIndex = Math.floor(cycleTime / slideDuration);
+      
+      if (newIndex !== currentIndex) {
+        currentIndex = newIndex;
+        slideElement.src = images[currentIndex];
+        console.log("Slide", currentIndex + 1, "| Server time:", new Date(serverTime).toISOString());
+      }
+    }
+
+    // Initialize and start
+    async function start() {
+      console.log("Initializing slideshow with", images.length, "images");
+      console.log("Slide duration:", slideDuration / 1000, "seconds");
+      
+      // Sync with server
+      await syncServerTime();
+      
+      // Show initial slide
+      updateSlide();
+      
+      // Update every 100ms for smooth, millisecond-perfect sync
+      setInterval(updateSlide, 100);
+      
+      // Resync every 5 minutes to stay accurate
+      setInterval(syncServerTime, 300000);
+    }
+
+    start();
   </script>
 </body>
 </html>
