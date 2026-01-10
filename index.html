@@ -349,6 +349,10 @@
     const logViewer = document.getElementById("logViewer");
     let slideDuration = 10000; // 10 seconds per slide
     
+    // Server configuration for emergency broadcast
+    const serverURL = "http://localhost:3000";
+    let isCheckingEmergency = false;
+    
     // Time sync variables
     let serverTimeOffset = 0;
     let syncedTime = false;
@@ -419,53 +423,26 @@
       }
     }
 
-    // Get accurate server time - MULTIPLE SOURCES WITH FAST PARALLEL SYNC
+    // Get accurate server time - SIMPLE AND RELIABLE
     async function syncServerTime() {
       const t0 = performance.now();
       
-      // Multiple time sources to try in parallel
-      const sources = [
-        async () => {
-          const res = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
-          const data = await res.json();
-          return { time: new Date(data.datetime).getTime(), source: "WorldTimeAPI" };
-        },
-        async () => {
-          const res = await fetch("https://timeapi.io/api/Time/current/zone?timeZone=UTC", { cache: "no-store" });
-          const data = await res.json();
-          return { time: new Date(data.dateTime).getTime(), source: "TimeAPI.io" };
-        },
-        async () => {
-          const res = await fetch("http://worldclockapi.com/api/json/utc/now", { cache: "no-store" });
-          const data = await res.json();
-          return { time: new Date(data.currentDateTime).getTime(), source: "WorldClockAPI" };
-        }
-      ];
-      
       try {
-        // Race all sources with 3 second timeout each
-        const promises = sources.map(src => 
-          Promise.race([
-            src(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
-          ])
-        );
+        const res = await Promise.race([
+          fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
+        ]);
         
-        // Wait for first successful response
-        const result = await Promise.race(
-          promises.map(p => p.catch(e => null))
-        ).then(r => r || Promise.race(promises));
-        
-        if (!result) throw new Error("All sources failed");
-        
-        const serverMs = result.time;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const serverMs = new Date(data.datetime).getTime();
         const localMs = Date.now();
         const t1 = performance.now();
         lastSyncLatency = Math.round(t1 - t0);
         serverTimeOffset = serverMs - localMs;
         syncedTime = true;
         
-        addLog("✓ SYNCED via " + result.source + " - latency: " + lastSyncLatency + "ms");
+        addLog("✓ SYNCED - latency: " + lastSyncLatency + "ms");
         syncIndicator.className = "synced";
         syncIndicator.textContent = "🟢 SYNCED - " + lastSyncLatency + "ms";
         return true;
@@ -647,15 +624,65 @@
       const text = document.getElementById("emergencyText").value;
       
       if (!emergencyMode && text.trim()) {
-        emergencyMode = true;
-        overlay.textContent = text;
-        overlay.style.display = "flex";
-        addLog("EMERGENCY BROADCAST ACTIVATED");
+        // Send emergency broadcast to server (broadcast to all devices)
+        fetch(serverURL + "/api/emergency", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, active: true })
+        }).then(r => r.json()).then(data => {
+          if (data.success) {
+            emergencyMode = true;
+            overlay.textContent = text;
+            overlay.style.display = "flex";
+            addLog("🚨 EMERGENCY BROADCAST SENT TO ALL DEVICES: " + text);
+          }
+        }).catch(err => {
+          addLog("❌ Failed to send broadcast: " + err.message);
+        });
       } else {
-        emergencyMode = false;
-        overlay.style.display = "none";
-        addLog("Emergency broadcast ended");
+        // Clear emergency broadcast from server
+        fetch(serverURL + "/api/emergency", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: null, active: false })
+        }).then(r => r.json()).then(data => {
+          emergencyMode = false;
+          overlay.style.display = "none";
+          addLog("✓ Emergency broadcast cleared from all devices");
+        }).catch(err => {
+          addLog("❌ Failed to clear broadcast: " + err.message);
+        });
       }
+    }
+
+    // Check for emergency broadcasts from server (all devices poll for updates)
+    async function checkEmergencyBroadcast() {
+      if (isCheckingEmergency) return; // Prevent overlapping requests
+      isCheckingEmergency = true;
+      
+      try {
+        const response = await fetch(serverURL + "/api/emergency", { cache: "no-store" });
+        const data = await response.json();
+        const overlay = document.getElementById("emergencyOverlay");
+        
+        if (data.active && data.message && !emergencyMode) {
+          // Emergency broadcast from another device
+          emergencyMode = true;
+          overlay.textContent = data.message;
+          overlay.style.display = "flex";
+          addLog("🚨 EMERGENCY BROADCAST RECEIVED: " + data.message);
+        } else if (!data.active && emergencyMode) {
+          // Emergency broadcast was cleared
+          emergencyMode = false;
+          overlay.style.display = "none";
+          addLog("✓ Emergency broadcast cleared");
+        }
+      } catch (err) {
+        // Server not available - continue running locally
+        console.log("Emergency server unavailable: " + err.message);
+      }
+      
+      isCheckingEmergency = false;
     }
 
     function exportLogs() {
@@ -724,18 +751,18 @@
       let synced = false;
       let attempts = 0;
       
-      while (!synced && attempts < 20) {
+      while (!synced && attempts < 30) {
         attempts++;
         console.log("Sync attempt", attempts);
         synced = await syncServerTime();
         if (synced) break;
         
-        // Short delay between attempts: 200ms, 400ms, 600ms, etc
-        await new Promise(r => setTimeout(r, 200 * attempts));
+        // Very short delay: 100ms, 200ms, 300ms, etc
+        await new Promise(r => setTimeout(r, 100 * attempts));
       }
       
       if (!synced) {
-        addLog("⚠️ WARNING: Could not sync after 20 attempts - using local time");
+        addLog("⚠️ WARNING: Could not sync after 30 attempts - using local time");
       }
       
       // Show initial slide
@@ -752,6 +779,10 @@
       
       // Resync every 1 minute to stay accurate
       setInterval(syncServerTime, 60000);
+      
+      // Check for emergency broadcasts every 2 seconds (all devices poll)
+      setInterval(checkEmergencyBroadcast, 2000);
+      addLog(\"Emergency broadcast sync enabled - checking server every 2s\");
     }
 
     start();
