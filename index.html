@@ -413,6 +413,13 @@
         return;
       }
 
+      // Press 0 to force reload and resync
+      if (e.key === "0") {
+        addLog("Force reload triggered (key 0)");
+        location.reload();
+        return;
+      }
+
       keySequence += e.key;
       if (keySequence.indexOf("123") !== -1) {
         adminPanel.classList.add("open");
