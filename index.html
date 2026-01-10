@@ -368,6 +368,7 @@
         <button class="admin-btn" onclick="exportLogs()">💾 Export Logs</button>
         <button class="admin-btn" onclick="resetStats()">📊 Reset Stats</button>
         <button class="admin-btn" onclick="clearServerConfig()" style="background: #ff6600;">⚙️ Reconfigure Server</button>
+        <button class="admin-btn" onclick="toggleSyncAlarm()" style="background: #ff0000;">🚨 Sync Alarm</button>
       </div>
 
       <div class="admin-section" style="grid-column: 1/-1;">
@@ -420,6 +421,7 @@
     let fadeEnabled = false;
     let autoDimEnabled = false;
     let emergencyMode = false;
+    let syncAlarmEnabled = false; // Warning sound for sync failures
     let brightness = 100;
     let contrast = 100;
     let startTime = Date.now();
@@ -440,6 +442,40 @@
         logViewer.innerHTML = systemLog.map(l => '<div class="log-entry">' + l + '</div>').join('');
         logViewer.scrollTop = logViewer.scrollHeight;
       }
+    }
+
+    // Play horrific alarm sound when sync fails
+    function playAlarmSound() {
+      if (!syncAlarmEnabled) return;
+      
+      // Create audio context for synthesized alarm
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const duration = 2; // 2 seconds of alarm
+      
+      // Create multiple oscillators for horrific sound
+      for (let i = 0; i < 3; i++) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Different frequencies for chaotic sound
+        oscillator.frequency.setValueAtTime(400 + (i * 300), audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(800 + (i * 400), audioContext.currentTime + duration);
+        
+        // Sawtooth wave for harsh sound
+        oscillator.type = 'sawtooth';
+        
+        // Loud volume with pulsing
+        gainNode.gain.setValueAtTime(0.8, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration);
+      }
+      
+      addLog("🚨 SYNC ALARM TRIGGERED - LOUD WARNING!");
     }
 
     function updateStatusDisplay() {
@@ -532,6 +568,9 @@
       syncIndicatorElement.className = "error";
       syncIndicatorElement.textContent = "🔴 SYNC ERROR";
       currentAPI = "";
+      
+      // Play horrific alarm if enabled
+      playAlarmSound();
       
       // Retry in 2 seconds
       setTimeout(syncServerTime, 2000);
@@ -702,6 +741,11 @@
     function toggleAutoDim() {
       autoDimEnabled = !autoDimEnabled;
       addLog("Auto-dim " + (autoDimEnabled ? "enabled" : "disabled"));
+    }
+
+    function toggleSyncAlarm() {
+      syncAlarmEnabled = !syncAlarmEnabled;
+      addLog("🚨 Sync alarm " + (syncAlarmEnabled ? "ENABLED - will play loud warning on sync failure" : "DISABLED"));
     }
 
     function toggleEmergency() {
