@@ -468,6 +468,22 @@
     let totalErrors = 0;
     let totalImpressions = 0;
     let totalCycles = 0;
+    
+    // Cross-tab communication for emergency broadcasts
+    const broadcastChannel = new BroadcastChannel('emergency_channel');
+    
+    broadcastChannel.onmessage = (event) => {
+      const overlay = document.getElementById("emergencyOverlay");
+      if (event.data.text) {
+        overlay.textContent = event.data.text;
+        overlay.style.display = "flex";
+        emergencyMode = true;
+        addLog("🚨 EMERGENCY (from another tab): " + event.data.text);
+      } else {
+        overlay.style.display = "none";
+        emergencyMode = false;
+      }
+    };
 
     function addLog(msg) {
       const time = new Date().toLocaleTimeString();
@@ -835,10 +851,16 @@
         overlay.textContent = text;
         overlay.style.display = "flex";
         addLog("🚨 EMERGENCY MESSAGE DISPLAYED: " + text);
+        
+        // Broadcast to all tabs on this device
+        broadcastChannel.postMessage({ text: text });
       } else {
         emergencyMode = false;
         overlay.style.display = "none";
         addLog("✓ Emergency message cleared");
+        
+        // Clear message on all tabs
+        broadcastChannel.postMessage({ text: "" });
       }
     }
 
@@ -891,8 +913,8 @@
         return;
       }
       
-      // Press T to toggle sync alarm and show state
-      if ((e.key === "t" || e.key === "T") && !e.repeat) {
+      // Press T to toggle sync alarm and show state (only when admin panel is closed)
+      if ((e.key === "t" || e.key === "T") && !e.repeat && !adminPanel.classList.contains("open")) {
         toggleSyncAlarm();
         return;
       }
